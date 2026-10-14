@@ -1,0 +1,51 @@
+// users/{uid}/workouts/{0..3}: session string 1..64, logged bool,
+// exercises: exactly 12 {done bool, weight string <=16, empty or 0..2000 kg},
+// updatedAt: server timestamp. All fields required; uid determined by path.
+// users/{uid}/history/{session}: day int 0..3, at timestamp, immutable.
+// History is self-reported; historical timestamps support explicit import.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() { return request.auth != null; }
+    function isOwner(uid) { return isAuthenticated() && request.auth.uid == uid; }
+    function validExercise(e) {
+      return e is map && e.keys().hasAll(['done','weight'])
+        && e.keys().hasOnly(['done','weight']) && e.done is bool
+        && e.weight is string && e.weight.size() <= 16
+        && (e.weight == '' || (e.weight.matches('^[0-9]+([.][0-9]+)?$')
+          && float(e.weight) >= 0 && float(e.weight) <= 2000));
+    }
+    function validWorkout(d) {
+      return d.keys().hasAll(['session','logged','exercises','updatedAt'])
+        && d.keys().hasOnly(['session','logged','exercises','updatedAt'])
+        && d.session is string && d.session.size() >= 1 && d.session.size() <= 64
+        && d.session.matches('^[a-zA-Z0-9-]+$') && d.logged is bool
+        && d.updatedAt is timestamp && d.updatedAt == request.time
+        && d.exercises is list && d.exercises.size() == 12
+        && validExercise(d.exercises[0]) && validExercise(d.exercises[1])
+        && validExercise(d.exercises[2]) && validExercise(d.exercises[3])
+        && validExercise(d.exercises[4]) && validExercise(d.exercises[5])
+        && validExercise(d.exercises[6]) && validExercise(d.exercises[7])
+        && validExercise(d.exercises[8]) && validExercise(d.exercises[9])
+        && validExercise(d.exercises[10]) && validExercise(d.exercises[11]);
+    }
+    function validHistory(d) {
+      return d.keys().hasAll(['day','at']) && d.keys().hasOnly(['day','at'])
+        && d.day is int && d.day >= 0 && d.day <= 3
+        && d.at is timestamp && d.at <= request.time + duration.value(5,'m');
+    }
+    match /users/{uid}/workouts/{day} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && day.matches('^[0-3]$')
+        && validWorkout(request.resource.data);
+    }
+    match /users/{uid}/history/{session} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && session.size() <= 64
+        && validHistory(request.resource.data);
+      allow update: if isOwner(uid) && validHistory(request.resource.data)
+        && request.resource.data == resource.data;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

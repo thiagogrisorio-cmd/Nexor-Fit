@@ -1,0 +1,23 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "southamerica-east1",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "Nexor-Fit",
+        "supportEmail": "thiagogrisorio@gmail.com"
+      }
+    },
+    "authorizedDomains": [
+      "nexor-fit-app.firebaseapp.com",
+      "nexor-fit-app.web.app",
+      "thiagogrisorio-cmd.github.io",
+      "localhost"
+    ]
+  }
+}
