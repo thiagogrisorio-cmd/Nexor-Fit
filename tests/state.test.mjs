@@ -19,4 +19,3 @@ test('legacy import preserves valid data and sanitizes invalid weights',()=>{
  const result=legacyWorkout(0,{'0-0':{done:true,weight:'42.5'},'0-1':{weight:'-3'}},{0:true});
  assert.equal(result.exercises.length,12);assert.deepEqual(result.exercises[0],{done:true,weight:'42.5'});assert.equal(result.exercises[1].weight,'');assert.equal(result.logged,true);
 });
-

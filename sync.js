@@ -96,5 +96,3 @@ export function connectSync(adapter) {
   window.addEventListener('online',refreshStatus);window.addEventListener('offline',refreshStatus);
   return controller;
 }
-
-
