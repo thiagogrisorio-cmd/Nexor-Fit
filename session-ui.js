@@ -32,6 +32,9 @@ async function save(next, operation=null){
      tx.set(ref,{...result,updatedAt:serverTimestamp()});
      tx.set(controlRef,{sessionId:result.status==='active'?result.id:'',updatedAt:serverTimestamp()});
    });
+   const saved=await getDoc(ref);
+   if(!saved.exists())throw Error('Sessão não encontrada após gravação');
+   next=saved.data();
   }else{
    if(operation)next=operation(session);
    localStorage.setItem(key,JSON.stringify(next.status==='active'?next:null));
