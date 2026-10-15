@@ -7,6 +7,7 @@ let loadGeneration=0;
 const key='nexor_fit_active_session_v1',historyKey='nexor_fit_sessions_v1';
 const $=id=>document.getElementById(id);
 let session=null, saving=false, ready=false, uid=null, completedSessions=[];
+let renderedSetKey='',renderedHistoryKey='';
 const local=()=>{try{return JSON.parse(localStorage.getItem(key))}catch{return null}};
 const fmt=seconds=>[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
 const restfmt=seconds=>String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
@@ -63,7 +64,8 @@ async function load(){
 function render(){
  const panel=$('sessionPanel');if(!panel)return;
  const history=$('sessionHistory');
- if(history)history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+' · '+sessionProgress(item).done+' séries</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';
+ const historyKeyView=JSON.stringify(completedSessions.map(item=>[item.id,item.status,item.endedAt]));
+ if(history && renderedHistoryKey!==historyKeyView){renderedHistoryKey=historyKeyView;history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+' · '+sessionProgress(item).done+' séries</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';}
  const current=session?.status==='active'&&session.day===window.nexorActiveDay?.();
  panel.classList.toggle('hidden',!current);
  $('sessionStartPanel').classList.toggle('hidden',!!current);
@@ -74,7 +76,8 @@ function render(){
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
  const rest=remainingRest(session);$('sessionRest').textContent=rest?restfmt(rest):'Pronto para a próxima série';
- $('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');
+ const setKey=JSON.stringify([session.id,session.sets,saving]);
+ if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
  $('finishSession').disabled=saving;
 }
 export function initSessionUI(getDay){
