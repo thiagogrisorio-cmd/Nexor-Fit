@@ -10,7 +10,7 @@ export function planOfflineSync(remote,operations){
  // Completed sessions cannot be edited again. A matching finish is an idempotent retry.
  if(remote.status==='completed'){
   const finish=ordered.find(op=>op.kind==='finish');
-  if(finish&&remote.endedAt===new Date(finish.at).toISOString()){
+  if(ordered.length===1&&finish&&remote.endedAt===new Date(finish.at).toISOString()){
    return {status:'already-applied',session:remote,operationIds:ordered.map(op=>op.id)};
   }
   return {status:'conflict',reason:'remote-completed'};
