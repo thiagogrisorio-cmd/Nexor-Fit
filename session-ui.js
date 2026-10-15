@@ -1,7 +1,7 @@
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,writeBatch,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,runTransaction,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const db=getFirestore();
 let loadGeneration=0;
 const key='nexor_fit_active_session_v1',historyKey='nexor_fit_sessions_v1';
@@ -16,17 +16,24 @@ async function save(next){
  try{
   if(uid){
    const ref=doc(db,'users',uid,'sessions',next.id);
-   const batch=writeBatch(db);
-   batch.set(ref,{...next,updatedAt:serverTimestamp()});
-   batch.set(doc(db,'users',uid,'sessionControl','active'),{sessionId:next.status==='active'?next.id:'',updatedAt:serverTimestamp()});
-   await batch.commit();
+   const controlRef=doc(db,'users',uid,'sessionControl','active');
+   await runTransaction(db,async tx=>{
+     const control=await tx.get(controlRef);
+     const currentId=control.exists()?control.data().sessionId:'';
+     const stored=await tx.get(ref);
+     if(next.status==='active' && !stored.exists() && currentId)throw Error('Outra sessão já está ativa');
+     if(stored.exists() && stored.data().status==='completed')throw Error('Sessão já concluída');
+     if(stored.exists() && currentId!==next.id)throw Error('Sessão modificada em outro aparelho');
+     tx.set(ref,{...next,updatedAt:serverTimestamp()});
+     tx.set(controlRef,{sessionId:next.status==='active'?next.id:'',updatedAt:serverTimestamp()});
+   });
   }else{
    localStorage.setItem(key,JSON.stringify(next.status==='active'?next:null));
    if(next.status==='completed'){const history=JSON.parse(localStorage.getItem(historyKey)||'[]');history.push(next);localStorage.setItem(historyKey,JSON.stringify(history));}
   }
   session=next;
   if(next.status==='completed')completedSessions=[next,...completedSessions.filter(item=>item.id!==next.id)];
- }finally{saving=false;render();}
+ }catch(error){if(uid)await load();throw error;}finally{saving=false;render();}
 }
 async function load(){
  const generation=++loadGeneration;
