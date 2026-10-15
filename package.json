@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/state.test.mjs tests/workout-session.test.mjs tests/offline-operations.test.mjs",
+    "test": "node --test tests/state.test.mjs tests/workout-session.test.mjs tests/offline-operations.test.mjs tests/offline-sync-plan.test.mjs",
     "test:rules": "firebase emulators:exec --project demo-nexor-fit-rules-test --only firestore \"node --test tests/firestore-rules.test.mjs\""
   },
   "devDependencies": {
