@@ -18,7 +18,9 @@ function watchSession(accountUid,id){
  if(!id){if(!saving){session=null;render();}return;}
  stopSessionListener=onSnapshot(doc(db,'users',accountUid,'sessions',id),snapshot=>{
   if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving)return;
-  session=snapshot.exists()&&snapshot.data().status==='active'?snapshot.data():null;
+  const remote=snapshot.exists()?snapshot.data():null;
+  session=remote?.status==='active'?remote:null;
+  if(remote?.status==='completed')completedSessions=[remote,...completedSessions.filter(item=>item.id!==remote.id)];
   render();
  },error=>console.error('Nexor live session:',error));
 }
