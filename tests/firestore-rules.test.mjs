@@ -4,7 +4,7 @@ import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/ru
 import {doc,getDoc,setDoc,serverTimestamp} from 'firebase/firestore';
 
 let env;
-const projectId='nexor-fit-rules-test';
+const projectId='demo-nexor-fit-rules-test';
 before(async()=>{
  env=await initializeTestEnvironment({
   projectId,
