@@ -13,12 +13,13 @@ const fmt=seconds=>[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds
 const restfmt=seconds=>String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
 async function save(next, operation=null){
  if(saving)throw Error('Aguarde a gravação anterior');
+ const accountAtStart=uid;
  saving=true;render();
  try{
-  if(uid){
-   const ref=doc(db,'users',uid,'sessions',next.id);
-   const controlRef=doc(db,'users',uid,'sessionControl','active');
-   const accountUid=uid;
+  if(accountAtStart){
+   const ref=doc(db,'users',accountAtStart,'sessions',next.id);
+   const controlRef=doc(db,'users',accountAtStart,'sessionControl','active');
+   const accountUid=accountAtStart;
    await runTransaction(db,async tx=>{
      const control=await tx.get(controlRef);
      const currentId=control.exists()?control.data().sessionId:'';
@@ -40,10 +41,10 @@ async function save(next, operation=null){
    localStorage.setItem(key,JSON.stringify(next.status==='active'?next:null));
    if(next.status==='completed'){const history=JSON.parse(localStorage.getItem(historyKey)||'[]');history.push(next);localStorage.setItem(historyKey,JSON.stringify(history));}
   }
-  if(uid!==auth.currentUser?.uid)throw Error('Conta alterada durante a gravação');
+  if(accountAtStart!==auth.currentUser?.uid)throw Error('Conta alterada durante a gravação');
   session=next;
   if(next.status==='completed')completedSessions=[next,...completedSessions.filter(item=>item.id!==next.id)];
- }catch(error){if(uid)await load();throw error;}finally{saving=false;render();}
+ }catch(error){if(accountAtStart===auth.currentUser?.uid)await load();throw error;}finally{saving=false;render();}
 }
 async function load(){
  const generation=++loadGeneration;
