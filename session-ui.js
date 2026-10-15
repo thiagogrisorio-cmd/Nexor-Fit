@@ -1,6 +1,6 @@
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
-import {cacheOnlineWorkout} from './offline-controller.js';
+import {cacheOnlineWorkout,readOfflineWorkout,changeOfflineWorkout,pendingOfflineOperations} from './offline-controller.js';
 import {onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,onSnapshot,runTransaction,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const db=getFirestore();
@@ -19,11 +19,18 @@ function watchSession(accountUid,id){
  if(!id){if(!saving){session=null;render();}return;}
  stopSessionListener=onSnapshot(doc(db,'users',accountUid,'sessions',id),snapshot=>{
   if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving||snapshot.metadata.hasPendingWrites)return;
+  pendingOfflineOperations(accountUid).then(pending=>{
+   if(pending.some(item=>item.sessionId===id))return;
+   applyRemoteSession(snapshot,accountUid);
+  }).catch(console.warn);
+ },error=>console.error('Nexor live session:',error));
+}
+function applyRemoteSession(snapshot,accountUid){
+ if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving)return;
   const remote=snapshot.exists()?snapshot.data():null;
   session=remote?.status==='active'?remote:null;
   if(remote?.status==='completed')completedSessions=[remote,...completedSessions.filter(item=>item.id!==remote.id)];
   render();
- },error=>console.error('Nexor live session:',error));
 }
 function watchControl(accountUid){
  stopLiveListeners();
@@ -40,6 +47,20 @@ const key='nexor_fit_active_session_v1',historyKey='nexor_fit_sessions_v1';
 const $=id=>document.getElementById(id);
 let session=null, saving=false, ready=false, uid=null, completedSessions=[];
 let renderedSetKey='',renderedHistoryKey='';
+const activeCacheKey=account=>'nexor_fit_offline_active_'+account;
+const notifyQueue=()=>window.dispatchEvent(new Event('nexor-offline-queue-changed'));
+async function offlineEdit(kind,exercise,set,done){
+ const account=auth.currentUser?.uid;
+ if(!account||!session?.id)throw Error('Sessão offline indisponível');
+ const pending=await pendingOfflineOperations(account);
+ if(navigator.onLine&&!pending.some(item=>item.sessionId===session.id))return false;
+ const next=await changeOfflineWorkout({scope:account,sessionId:session.id,kind,exercise,set,done});
+ session=next;
+ if(next.status==='completed')completedSessions=[next,...completedSessions.filter(item=>item.id!==next.id)];
+ notifyQueue();render();
+ return true;
+}
+
 const local=()=>{try{return JSON.parse(localStorage.getItem(key))}catch{return null}};
 const fmt=seconds=>[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
 const restfmt=seconds=>String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
@@ -49,6 +70,8 @@ async function save(next, operation=null){
  saving=true;render();
  try{
   if(accountAtStart){
+   const pending=await pendingOfflineOperations(accountAtStart);
+   if(pending.some(item=>item.sessionId===next.id))throw Error('Há alterações offline pendentes; sincronização necessária');
    const ref=doc(db,'users',accountAtStart,'sessions',next.id);
    const controlRef=doc(db,'users',accountAtStart,'sessionControl','active');
    const accountUid=accountAtStart;
@@ -69,7 +92,7 @@ async function save(next, operation=null){
    const saved=await getDoc(ref);
    if(!saved.exists())throw Error('Sessão não encontrada após gravação');
    next=saved.data();
-   await cacheOnlineWorkout(accountAtStart,next).catch(error=>console.warn('Offline cache:',error));
+   await cacheOnlineWorkout(accountAtStart,next).then(()=>localStorage.setItem(activeCacheKey(accountAtStart),next.status==='active'?next.id:'')).catch(error=>console.warn('Offline cache:',error));
   }else{
    if(operation)next=operation(session);
    localStorage.setItem(key,JSON.stringify(next.status==='active'?next:null));
@@ -94,7 +117,20 @@ async function load(){
   }else {loadedSession=local();loadedHistory=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
   if(generation!==loadGeneration||accountUid!==uid||saving)return;
   session=loadedSession;completedSessions=loadedHistory;
-  if(accountUid&&session?.status==='active')await cacheOnlineWorkout(accountUid,session).catch(console.warn);
+  if(accountUid){
+   const cachedId=localStorage.getItem(activeCacheKey(accountUid));
+   const pending=await pendingOfflineOperations(accountUid);
+   if(cachedId&&pending.some(item=>item.sessionId===cachedId)){
+    const cached=await readOfflineWorkout(accountUid,cachedId);
+    if(cached)session=cached.status==='active'?cached:null;
+    if(cached?.status==='completed')completedSessions=[cached,...completedSessions.filter(item=>item.id!==cached.id)];
+   }else if(!navigator.onLine&&cachedId){
+    const cached=await readOfflineWorkout(accountUid,cachedId);
+    if(cached?.status==='active')session=cached;
+   }
+  }
+  if(generation!==loadGeneration||accountUid!==uid||saving)return;
+  if(accountUid&&session?.status==='active')await cacheOnlineWorkout(accountUid,session).then(()=>localStorage.setItem(activeCacheKey(accountUid),session.id)).catch(console.warn);
   ready=true;
  }catch(error){if(generation!==loadGeneration)return;ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
  render();
@@ -130,11 +166,11 @@ export function initSessionUI(getDay){
  $('sessionSetList').onclick=async event=>{
   const button=event.target.closest('[data-set]');if(!button||saving)return;
   const [i,j]=button.dataset.set.split('-').map(Number);
-  try{await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
+  try{if(await offlineEdit('mark-set',i,j,!session.sets[i][j].done))return;await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
   if(!session||saving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
-  try{await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
+  try{if(await offlineEdit('finish'))return;await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
  };
  onAuthStateChanged(auth,()=>{
   const accountUid=auth.currentUser?.uid||null;
