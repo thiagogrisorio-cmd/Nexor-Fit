@@ -17,7 +17,7 @@ function watchSession(accountUid,id){
  observedSessionId=id;
  if(!id){if(!saving){session=null;render();}return;}
  stopSessionListener=onSnapshot(doc(db,'users',accountUid,'sessions',id),snapshot=>{
-  if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving)return;
+  if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving||snapshot.metadata.hasPendingWrites)return;
   const remote=snapshot.exists()?snapshot.data():null;
   session=remote?.status==='active'?remote:null;
   if(remote?.status==='completed')completedSessions=[remote,...completedSessions.filter(item=>item.id!==remote.id)];
@@ -28,7 +28,7 @@ function watchControl(accountUid){
  stopLiveListeners();
  if(!accountUid)return;
  stopControlListener=onSnapshot(doc(db,'users',accountUid,'sessionControl','active'),snapshot=>{
-  if(uid!==accountUid||auth.currentUser?.uid!==accountUid)return;
+  if(uid!==accountUid||auth.currentUser?.uid!==accountUid||snapshot.metadata.hasPendingWrites)return;
   const id=snapshot.exists()?snapshot.data().sessionId:'';
   watchSession(accountUid,id);
   if(!id&&!saving&&session?.status==='active')load();
