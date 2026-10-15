@@ -103,6 +103,12 @@ export function initSessionUI(getDay){
   try{await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
  };
  onAuthStateChanged(auth,()=>load());
+ document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && !saving)load();
+ });
+ window.addEventListener('focus',()=>{
+  if(document.visibilityState==='visible' && !saving)load();
+ });
  setInterval(render,1000);
  return {render,load};
 }
