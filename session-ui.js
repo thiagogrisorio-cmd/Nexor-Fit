@@ -33,6 +33,7 @@ async function save(next, operation=null){
      tx.set(ref,{...result,updatedAt:serverTimestamp()});
      tx.set(controlRef,{sessionId:result.status==='active'?result.id:'',updatedAt:serverTimestamp()});
    });
+   if(accountAtStart!==auth.currentUser?.uid)throw Error('Conta alterada durante a gravação');
    const saved=await getDoc(ref);
    if(!saved.exists())throw Error('Sessão não encontrada após gravação');
    next=saved.data();
