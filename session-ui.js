@@ -90,7 +90,7 @@ async function load(){
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
    loadedHistory=rows.docs.map(row=>row.data()).filter(item=>item.status==='completed');
   }else {loadedSession=local();loadedHistory=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
-  if(generation!==loadGeneration||accountUid!==uid)return;
+  if(generation!==loadGeneration||accountUid!==uid||saving)return;
   session=loadedSession;completedSessions=loadedHistory;
   ready=true;
  }catch(error){if(generation!==loadGeneration)return;ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
