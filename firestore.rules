@@ -46,6 +46,33 @@ service cloud.firestore {
       allow update: if isOwner(uid) && validHistory(request.resource.data)
         && request.resource.data == resource.data;
     }
+
+    // Active workout sessions: owner-only, bounded records.
+    match /users/{uid}/sessions/{sessionId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && sessionId.size() <= 64
+        && request.resource.data.keys().hasAll(['id','day','status','startedAt','sets','restSeconds','updatedAt'])
+        && request.resource.data.id == sessionId
+        && request.resource.data.day is int
+        && request.resource.data.day >= 0 && request.resource.data.day <= 3
+        && request.resource.data.status in ['active','completed']
+        && request.resource.data.sets is list
+        && request.resource.data.sets.size() == 12
+        && request.resource.data.restSeconds is int
+        && request.resource.data.restSeconds >= 0 && request.resource.data.restSeconds <= 600
+        && request.resource.data.updatedAt == request.time
+        && (!exists(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId))
+          || resource.data.status == 'active');
+    }
+    match /users/{uid}/sessionControl/{controlId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && controlId == 'active'
+        && request.resource.data.keys().hasOnly(['sessionId','updatedAt'])
+        && request.resource.data.sessionId is string
+        && request.resource.data.sessionId.size() <= 64
+        && request.resource.data.updatedAt == request.time;
+    }
     match /{document=**} { allow read, write: if false; }
   }
 }
