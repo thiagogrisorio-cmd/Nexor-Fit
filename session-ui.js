@@ -17,6 +17,7 @@ async function save(next, operation=null){
   if(uid){
    const ref=doc(db,'users',uid,'sessions',next.id);
    const controlRef=doc(db,'users',uid,'sessionControl','active');
+   const accountUid=uid;
    await runTransaction(db,async tx=>{
      const control=await tx.get(controlRef);
      const currentId=control.exists()?control.data().sessionId:'';
@@ -25,6 +26,7 @@ async function save(next, operation=null){
      if(stored.exists() && stored.data().status==='completed')throw Error('Sessão já concluída');
      if(stored.exists() && currentId!==next.id)throw Error('Sessão modificada em outro aparelho');
      if(operation && !stored.exists())throw Error('Sessão não encontrada');
+     if(accountUid!==auth.currentUser?.uid)throw Error('Conta alterada durante a gravação');
      const result=operation?operation(stored.data()):next;
      tx.set(ref,{...result,updatedAt:serverTimestamp()});
      next=result;
@@ -35,6 +37,7 @@ async function save(next, operation=null){
    localStorage.setItem(key,JSON.stringify(next.status==='active'?next:null));
    if(next.status==='completed'){const history=JSON.parse(localStorage.getItem(historyKey)||'[]');history.push(next);localStorage.setItem(historyKey,JSON.stringify(history));}
   }
+  if(uid!==auth.currentUser?.uid)throw Error('Conta alterada durante a gravação');
   session=next;
   if(next.status==='completed')completedSessions=[next,...completedSessions.filter(item=>item.id!==next.id)];
  }catch(error){if(uid)await load();throw error;}finally{saving=false;render();}
