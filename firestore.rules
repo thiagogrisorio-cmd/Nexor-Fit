@@ -47,6 +47,25 @@ service cloud.firestore {
         && request.resource.data == resource.data;
     }
 
+    function validSetEntry(s) {
+      return s is map && s.keys().hasAll(['done','completedAt'])
+        && s.keys().hasOnly(['done','completedAt'])
+        && s.done is bool
+        && (s.completedAt == null || (s.completedAt is string && s.completedAt.size() <= 32));
+    }
+    function validSetPair(p) {
+      return p is list && p.size() == 2
+        && validSetEntry(p[0]) && validSetEntry(p[1]);
+    }
+    function validSessionSets(s) {
+      return s is list && s.size() == 12
+        && validSetPair(s[0]) && validSetPair(s[1])
+        && validSetPair(s[2]) && validSetPair(s[3])
+        && validSetPair(s[4]) && validSetPair(s[5])
+        && validSetPair(s[6]) && validSetPair(s[7])
+        && validSetPair(s[8]) && validSetPair(s[9])
+        && validSetPair(s[10]) && validSetPair(s[11]);
+    }
     // Active workout sessions: owner-only, bounded records.
     match /users/{uid}/sessions/{sessionId} {
       allow read: if isOwner(uid);
@@ -57,8 +76,7 @@ service cloud.firestore {
         && request.resource.data.day is int
         && request.resource.data.day >= 0 && request.resource.data.day <= 3
         && request.resource.data.status in ['active','completed']
-        && request.resource.data.sets is list
-        && request.resource.data.sets.size() == 12
+        && validSessionSets(request.resource.data.sets)
         && request.resource.data.startedAt is string
         && request.resource.data.startedAt.size() <= 32
         && request.resource.data.keys().hasOnly(['id','day','status','startedAt','endedAt','durationSeconds','restSeconds','restUntil','sets','updatedAt'])
