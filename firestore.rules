@@ -59,11 +59,14 @@ service cloud.firestore {
         && request.resource.data.status in ['active','completed']
         && request.resource.data.sets is list
         && request.resource.data.sets.size() == 12
+        && request.resource.data.startedAt is string
+        && request.resource.data.startedAt.size() <= 32
+        && request.resource.data.keys().hasOnly(['id','day','status','startedAt','endedAt','durationSeconds','restSeconds','restUntil','sets','updatedAt'])
         && request.resource.data.restSeconds is int
         && request.resource.data.restSeconds >= 0 && request.resource.data.restSeconds <= 600
         && request.resource.data.updatedAt == request.time
         && (!exists(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId))
-          || resource.data.status == 'active');
+          || resource.data.status == 'active' && request.resource.data.startedAt == resource.data.startedAt && request.resource.data.day == resource.data.day);
     }
     match /users/{uid}/sessionControl/{controlId} {
       allow read: if isOwner(uid);
