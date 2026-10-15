@@ -45,15 +45,17 @@ async function save(next, operation=null){
 async function load(){
  const generation=++loadGeneration;
  uid=auth.currentUser?.uid||null;const accountUid=uid;ready=false;session=null;completedSessions=[];render();
+ let loadedSession=null,loadedHistory=[];
  try{
   if(uid){
    const control=await getDoc(doc(db,'users',uid,'sessionControl','active'));
    const id=control.exists()?control.data().sessionId:'';
-   if(id){const item=await getDoc(doc(db,'users',uid,'sessions',id));session=item.exists()?item.data():null;}
+   if(id){const item=await getDoc(doc(db,'users',accountUid,'sessions',id));loadedSession=item.exists()?item.data():null;}
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
-   completedSessions=rows.docs.map(row=>row.data()).filter(item=>item.status==='completed');
-  }else {session=local();completedSessions=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
+   loadedHistory=rows.docs.map(row=>row.data()).filter(item=>item.status==='completed');
+  }else {loadedSession=local();loadedHistory=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
   if(generation!==loadGeneration||accountUid!==uid)return;
+  session=loadedSession;completedSessions=loadedHistory;
   ready=true;
  }catch(error){if(generation!==loadGeneration)return;ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
  render();
