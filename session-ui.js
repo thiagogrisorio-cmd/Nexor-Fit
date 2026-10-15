@@ -3,6 +3,7 @@ import {auth} from './auth.js';
 import {onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,writeBatch,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const db=getFirestore();
+let loadGeneration=0;
 const key='nexor_fit_active_session_v1',historyKey='nexor_fit_sessions_v1';
 const $=id=>document.getElementById(id);
 let session=null, saving=false, ready=false, uid=null, completedSessions=[];
@@ -28,7 +29,8 @@ async function save(next){
  }finally{saving=false;render();}
 }
 async function load(){
- uid=auth.currentUser?.uid||null;ready=false;session=null;completedSessions=[];render();
+ const generation=++loadGeneration;
+ uid=auth.currentUser?.uid||null;const accountUid=uid;ready=false;session=null;completedSessions=[];render();
  try{
   if(uid){
    const control=await getDoc(doc(db,'users',uid,'sessionControl','active'));
@@ -37,8 +39,9 @@ async function load(){
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
    completedSessions=rows.docs.map(row=>row.data()).filter(item=>item.status==='completed');
   }else {session=local();completedSessions=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
+  if(generation!==loadGeneration||accountUid!==uid)return;
   ready=true;
- }catch(error){ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
+ }catch(error){if(generation!==loadGeneration)return;ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
  render();
 }
 function render(){
@@ -50,7 +53,7 @@ function render(){
  $('sessionStartPanel').classList.toggle('hidden',!!session&&session.status==='active');
  if(session?.status==='active'&&!current)$('sessionMessage').textContent='Há um treino em andamento. Abra o Treino '+String.fromCharCode(65+session.day)+' para continuar.';
  else $('sessionMessage').textContent='';
- $('sessionStartPanel').querySelector('button').disabled=!ready||saving;
+ $('sessionStartPanel').querySelector('button').disabled=!ready||saving||session?.status==='active';
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
