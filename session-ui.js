@@ -29,7 +29,7 @@ function watchControl(accountUid){
   if(uid!==accountUid||auth.currentUser?.uid!==accountUid)return;
   const id=snapshot.exists()?snapshot.data().sessionId:'';
   watchSession(accountUid,id);
-  if(!id&&!saving)load();
+  if(!id&&!saving&&session?.status==='active')load();
  },error=>console.error('Nexor live control:',error));
 }
 
