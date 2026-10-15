@@ -1,6 +1,6 @@
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
-import {cacheOnlineWorkout,readOfflineWorkout,pendingOfflineOperations,changeOfflineWorkout} from './offline-controller.js';
+import {cacheOnlineWorkout} from './offline-controller.js';
 import {onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,onSnapshot,runTransaction,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const db=getFirestore();
