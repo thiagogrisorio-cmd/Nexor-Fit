@@ -1,6 +1,7 @@
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
-import {getFirestore,doc,getDoc,setDoc,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import {onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import {getFirestore,doc,getDoc,writeBatch,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const db=getFirestore();
 const key='nexor_fit_active_session_v1',historyKey='nexor_fit_sessions_v1';
 const $=id=>document.getElementById(id);
@@ -14,8 +15,10 @@ async function save(next){
  try{
   if(uid){
    const ref=doc(db,'users',uid,'sessions',next.id);
-   await setDoc(ref,{...next,updatedAt:serverTimestamp()});
-   await setDoc(doc(db,'users',uid,'sessionControl','active'),{sessionId:next.status==='active'?next.id:'',updatedAt:serverTimestamp()});
+   const batch=writeBatch(db);
+   batch.set(ref,{...next,updatedAt:serverTimestamp()});
+   batch.set(doc(db,'users',uid,'sessionControl','active'),{sessionId:next.status==='active'?next.id:'',updatedAt:serverTimestamp()});
+   await batch.commit();
   }else{
    localStorage.setItem(key,JSON.stringify(next.status==='active'?next:null));
    if(next.status==='completed'){const history=JSON.parse(localStorage.getItem(historyKey)||'[]');history.push(next);localStorage.setItem(historyKey,JSON.stringify(history));}
@@ -40,6 +43,8 @@ function render(){
  const current=session?.status==='active'&&session.day===window.nexorActiveDay?.();
  panel.classList.toggle('hidden',!current);
  $('sessionStartPanel').classList.toggle('hidden',!!session&&session.status==='active');
+ if(session?.status==='active'&&!current)$('sessionMessage').textContent='Há um treino em andamento. Abra o Treino '+String.fromCharCode(65+session.day)+' para continuar.';
+ else $('sessionMessage').textContent='';
  $('sessionStartPanel').querySelector('button').disabled=!ready||saving;
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
@@ -66,7 +71,7 @@ export function initSessionUI(getDay){
   if(!session||saving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
   try{await save(finishSession(session));}catch(e){alert('Não foi possível concluir o treino.');}
  };
- auth.onAuthStateChanged(()=>load());
+ onAuthStateChanged(auth,()=>load());
  setInterval(render,1000);
  return {render,load};
 }
