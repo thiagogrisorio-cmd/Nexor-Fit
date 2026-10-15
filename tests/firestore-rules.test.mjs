@@ -1,4 +1,5 @@
 import test, {before,after} from 'node:test';
+import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
 import {doc,getDoc,setDoc,serverTimestamp} from 'firebase/firestore';
@@ -58,4 +59,27 @@ test('cannot change day or start timestamp after session creation',async()=>{
 test('rejects extra fields and malformed start timestamps',async()=>{
  await assertFails(setDoc(doc(db('alice'),'users/alice/sessions/extra-1'),{...session('extra-1'),admin:true}));
  await assertFails(setDoc(doc(db('alice'),'users/alice/sessions/time-1'),{...session('time-1'),startedAt:'yesterday'}));
+});
+
+test('simultaneous starts share one active-session pointer',async()=>{
+ const path='users/concurrent/sessionControl/active';
+ const {runTransaction}=await import('firebase/firestore');
+ const attempt=async id=>{
+  const firestore=db('concurrent');
+  const control=doc(firestore,path);
+  const target=doc(firestore,'users/concurrent/sessions/'+id);
+  return runTransaction(firestore,async tx=>{
+   const snapshot=await tx.get(control);
+   if(snapshot.exists()&&snapshot.data().sessionId)throw Error('Treino já ativo');
+   tx.set(target,session(id));
+   tx.set(control,{sessionId:id,updatedAt:serverTimestamp()});
+  });
+ };
+ const results=await Promise.allSettled([attempt('race-one'),attempt('race-two')]);
+ const success=results.filter(item=>item.status==='fulfilled');
+ const failure=results.filter(item=>item.status==='rejected');
+ assert.equal(success.length,1,'exactly one device must start a session');
+ assert.equal(failure.length,1,'other device must be rejected');
+ const pointer=await assertSucceeds(getDoc(doc(db('concurrent'),path)));
+ assert.ok(['race-one','race-two'].includes(pointer.data().sessionId));
 });
