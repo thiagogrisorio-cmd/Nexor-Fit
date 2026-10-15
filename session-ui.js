@@ -50,7 +50,7 @@ function render(){
  if(history)history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+' · '+sessionProgress(item).done+' séries</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';
  const current=session?.status==='active'&&session.day===window.nexorActiveDay?.();
  panel.classList.toggle('hidden',!current);
- $('sessionStartPanel').classList.toggle('hidden',!!session&&session.status==='active');
+ $('sessionStartPanel').classList.toggle('hidden',!!current);
  if(session?.status==='active'&&!current)$('sessionMessage').textContent='Há um treino em andamento. Abra o Treino '+String.fromCharCode(65+session.day)+' para continuar.';
  else $('sessionMessage').textContent='';
  $('sessionStartPanel').querySelector('button').disabled=!ready||saving||session?.status==='active';
