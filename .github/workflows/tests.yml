@@ -1,0 +1,17 @@
+name: Nexor Fit unit tests
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/workout-sessions-v1]
+permissions:
+  contents: read
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
