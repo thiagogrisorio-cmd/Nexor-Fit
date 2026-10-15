@@ -31,6 +31,7 @@ async function save(next, operation=null){
      tx.set(controlRef,{sessionId:next.status==='active'?next.id:'',updatedAt:serverTimestamp()});
    });
   }else{
+   if(operation)next=operation(session);
    localStorage.setItem(key,JSON.stringify(next.status==='active'?next:null));
    if(next.status==='completed'){const history=JSON.parse(localStorage.getItem(historyKey)||'[]');history.push(next);localStorage.setItem(historyKey,JSON.stringify(history));}
   }
