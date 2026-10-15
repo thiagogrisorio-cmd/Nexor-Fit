@@ -30,8 +30,7 @@ async function save(next, operation=null){
      if(accountUid!==auth.currentUser?.uid)throw Error('Conta alterada durante a gravação');
      const result=operation?operation(stored.data()):next;
      tx.set(ref,{...result,updatedAt:serverTimestamp()});
-     next=result;
-     tx.set(controlRef,{sessionId:next.status==='active'?next.id:'',updatedAt:serverTimestamp()});
+     tx.set(controlRef,{sessionId:result.status==='active'?result.id:'',updatedAt:serverTimestamp()});
    });
   }else{
    if(operation)next=operation(session);
