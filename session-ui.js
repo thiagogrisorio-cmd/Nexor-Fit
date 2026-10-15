@@ -1,9 +1,38 @@
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,runTransaction,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,onSnapshot,runTransaction,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const db=getFirestore();
 let loadGeneration=0;
+let stopControlListener=null, stopSessionListener=null;
+let observedSessionId='';
+function stopLiveListeners(){
+ if(stopControlListener){stopControlListener();stopControlListener=null;}
+ if(stopSessionListener){stopSessionListener();stopSessionListener=null;}
+ observedSessionId='';
+}
+function watchSession(accountUid,id){
+ if(observedSessionId===id)return;
+ if(stopSessionListener){stopSessionListener();stopSessionListener=null;}
+ observedSessionId=id;
+ if(!id){if(!saving){session=null;render();}return;}
+ stopSessionListener=onSnapshot(doc(db,'users',accountUid,'sessions',id),snapshot=>{
+  if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving)return;
+  session=snapshot.exists()&&snapshot.data().status==='active'?snapshot.data():null;
+  render();
+ },error=>console.error('Nexor live session:',error));
+}
+function watchControl(accountUid){
+ stopLiveListeners();
+ if(!accountUid)return;
+ stopControlListener=onSnapshot(doc(db,'users',accountUid,'sessionControl','active'),snapshot=>{
+  if(uid!==accountUid||auth.currentUser?.uid!==accountUid)return;
+  const id=snapshot.exists()?snapshot.data().sessionId:'';
+  watchSession(accountUid,id);
+  if(!id&&!saving)load();
+ },error=>console.error('Nexor live control:',error));
+}
+
 const key='nexor_fit_active_session_v1',historyKey='nexor_fit_sessions_v1';
 const $=id=>document.getElementById(id);
 let session=null, saving=false, ready=false, uid=null, completedSessions=[];
@@ -102,7 +131,12 @@ export function initSessionUI(getDay){
   if(!session||saving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
   try{await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
  };
- onAuthStateChanged(auth,()=>load());
+ onAuthStateChanged(auth,()=>{
+  const accountUid=auth.currentUser?.uid||null;
+  uid=accountUid;
+  watchControl(accountUid);
+  load();
+ });
  document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible' && !saving)load();
  });
