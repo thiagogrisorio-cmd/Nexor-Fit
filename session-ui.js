@@ -1,11 +1,11 @@
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import {getFirestore,doc,getDoc,writeBatch,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,writeBatch,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const db=getFirestore();
 const key='nexor_fit_active_session_v1',historyKey='nexor_fit_sessions_v1';
 const $=id=>document.getElementById(id);
-let session=null, saving=false, ready=false, uid=null;
+let session=null, saving=false, ready=false, uid=null, completedSessions=[];
 const local=()=>{try{return JSON.parse(localStorage.getItem(key))}catch{return null}};
 const fmt=seconds=>[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
 const restfmt=seconds=>String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
@@ -24,22 +24,27 @@ async function save(next){
    if(next.status==='completed'){const history=JSON.parse(localStorage.getItem(historyKey)||'[]');history.push(next);localStorage.setItem(historyKey,JSON.stringify(history));}
   }
   session=next;
+  if(next.status==='completed')completedSessions=[next,...completedSessions.filter(item=>item.id!==next.id)];
  }finally{saving=false;render();}
 }
 async function load(){
- uid=auth.currentUser?.uid||null;ready=false;session=null;render();
+ uid=auth.currentUser?.uid||null;ready=false;session=null;completedSessions=[];render();
  try{
   if(uid){
    const control=await getDoc(doc(db,'users',uid,'sessionControl','active'));
    const id=control.exists()?control.data().sessionId:'';
    if(id){const item=await getDoc(doc(db,'users',uid,'sessions',id));session=item.exists()?item.data():null;}
-  }else session=local();
+   const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
+   completedSessions=rows.docs.map(row=>row.data()).filter(item=>item.status==='completed');
+  }else {session=local();completedSessions=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
   ready=true;
  }catch(error){ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
  render();
 }
 function render(){
  const panel=$('sessionPanel');if(!panel)return;
+ const history=$('sessionHistory');
+ if(history)history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+' · '+sessionProgress(item).done+' séries</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';
  const current=session?.status==='active'&&session.day===window.nexorActiveDay?.();
  panel.classList.toggle('hidden',!current);
  $('sessionStartPanel').classList.toggle('hidden',!!session&&session.status==='active');
