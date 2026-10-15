@@ -10,7 +10,7 @@ let session=null, saving=false, ready=false, uid=null, completedSessions=[];
 const local=()=>{try{return JSON.parse(localStorage.getItem(key))}catch{return null}};
 const fmt=seconds=>[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
 const restfmt=seconds=>String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
-async function save(next){
+async function save(next, operation=null){
  if(saving)throw Error('Aguarde a gravação anterior');
  saving=true;render();
  try{
@@ -24,7 +24,10 @@ async function save(next){
      if(next.status==='active' && !stored.exists() && currentId)throw Error('Outra sessão já está ativa');
      if(stored.exists() && stored.data().status==='completed')throw Error('Sessão já concluída');
      if(stored.exists() && currentId!==next.id)throw Error('Sessão modificada em outro aparelho');
-     tx.set(ref,{...next,updatedAt:serverTimestamp()});
+     if(operation && !stored.exists())throw Error('Sessão não encontrada');
+     const result=operation?operation(stored.data()):next;
+     tx.set(ref,{...result,updatedAt:serverTimestamp()});
+     next=result;
      tx.set(controlRef,{sessionId:next.status==='active'?next.id:'',updatedAt:serverTimestamp()});
    });
   }else{
@@ -80,11 +83,11 @@ export function initSessionUI(getDay){
  $('sessionSetList').onclick=async event=>{
   const button=event.target.closest('[data-set]');if(!button||saving)return;
   const [i,j]=button.dataset.set.split('-').map(Number);
-  try{await save(markSet(session,i,j,!session.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
+  try{await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
   if(!session||saving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
-  try{await save(finishSession(session));}catch(e){alert('Não foi possível concluir o treino.');}
+  try{await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
  };
  onAuthStateChanged(auth,()=>load());
  setInterval(render,1000);
