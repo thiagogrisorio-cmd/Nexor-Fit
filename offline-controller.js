@@ -22,6 +22,13 @@ export async function changeOfflineWorkout({scope,sessionId,kind,exercise,set,do
  await persistOfflineMutation({...next,id:scopedId(scope,sessionId),sessionId,scope},operation);
  return next;
 }
+export async function readOfflineWorkout(scope,sessionId){
+ if(!scope||!sessionId)throw Error('Escopo e sessão obrigatórios');
+ const stored=await getOfflineSession(scopedId(scope,sessionId));
+ if(!stored||stored.scope!==scope)return null;
+ const {scope:owner,sessionId:originalId,...data}=stored;
+ return {...data,id:originalId};
+}
 export async function pendingOfflineOperations(scope){
  if(!scope)throw Error('Escopo obrigatório');
  const operations=await listOfflineOperations();
