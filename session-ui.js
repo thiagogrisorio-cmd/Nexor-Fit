@@ -1,5 +1,6 @@
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
+import {cacheOnlineWorkout,readOfflineWorkout,pendingOfflineOperations,changeOfflineWorkout} from './offline-controller.js';
 import {onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,onSnapshot,runTransaction,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const db=getFirestore();
@@ -68,6 +69,7 @@ async function save(next, operation=null){
    const saved=await getDoc(ref);
    if(!saved.exists())throw Error('Sessão não encontrada após gravação');
    next=saved.data();
+   await cacheOnlineWorkout(accountAtStart,next).catch(error=>console.warn('Offline cache:',error));
   }else{
    if(operation)next=operation(session);
    localStorage.setItem(key,JSON.stringify(next.status==='active'?next:null));
@@ -92,6 +94,7 @@ async function load(){
   }else {loadedSession=local();loadedHistory=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
   if(generation!==loadGeneration||accountUid!==uid||saving)return;
   session=loadedSession;completedSessions=loadedHistory;
+  if(accountUid&&session?.status==='active')await cacheOnlineWorkout(accountUid,session).catch(console.warn);
   ready=true;
  }catch(error){if(generation!==loadGeneration)return;ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
  render();
