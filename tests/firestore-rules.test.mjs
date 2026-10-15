@@ -1,5 +1,4 @@
 import test, {before,after} from 'node:test';
-import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
 import {doc,getDoc,setDoc,serverTimestamp} from 'firebase/firestore';
@@ -14,6 +13,7 @@ before(async()=>{
 });
 after(async()=>{if(env)await env.cleanup();});
 const db=uid=>env.authenticatedContext(uid).firestore();
+const guest=()=>env.unauthenticatedContext().firestore();
 const sets=()=>Array.from({length:12},()=>Array.from({length:2},()=>({done:false,completedAt:null})));
 const session=id=>({id,day:0,status:'active',startedAt:'2026-10-15T12:00:00.000Z',endedAt:null,restSeconds:90,restUntil:null,sets:sets(),updatedAt:serverTimestamp()});
 
@@ -42,4 +42,20 @@ test('session control is owner-only and rejects unexpected fields',async()=>{
  await assertSucceeds(setDoc(doc(db('alice'),path),{sessionId:'allowed-1',updatedAt:serverTimestamp()}));
  await assertFails(getDoc(doc(db('bob'),path)));
  await assertFails(setDoc(doc(db('alice'),path),{sessionId:'allowed-1',updatedAt:serverTimestamp(),extra:true}));
+});
+
+test('unauthenticated visitor cannot read or write private sessions',async()=>{
+ const path='users/alice/sessions/allowed-1';
+ await assertFails(getDoc(doc(guest(),path)));
+ await assertFails(setDoc(doc(guest(),path),session('allowed-1')));
+});
+test('cannot change day or start timestamp after session creation',async()=>{
+ const path='users/alice/sessions/immutable-1';
+ await assertSucceeds(setDoc(doc(db('alice'),path),session('immutable-1')));
+ await assertFails(setDoc(doc(db('alice'),path),{...session('immutable-1'),day:2}));
+ await assertFails(setDoc(doc(db('alice'),path),{...session('immutable-1'),startedAt:'2026-10-15T12:01:00.000Z'}));
+});
+test('rejects extra fields and malformed start timestamps',async()=>{
+ await assertFails(setDoc(doc(db('alice'),'users/alice/sessions/extra-1'),{...session('extra-1'),admin:true}));
+ await assertFails(setDoc(doc(db('alice'),'users/alice/sessions/time-1'),{...session('time-1'),startedAt:'yesterday'}));
 });
