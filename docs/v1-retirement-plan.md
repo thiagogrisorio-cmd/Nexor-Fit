@@ -86,3 +86,6 @@ CI #593 estava em fila na consulta. Criado `v1-retirement-inventory.js` com `inv
 
 ## Adaptador de inventário administrativo paginado
 Adicionado `v1-retirement-inventory-admin.js`, que recebe uma instância autorizada do Firestore Admin e um UID específico, lê apenas `users/{uid}/sessions` ordenado por ID, pagina via `startAfter` e produz contagens agregadas por meio do coletor. Não há endpoint público, credenciais embutidas ou gravação. Testes do coletor e do adaptador incluídos no `npm test`. CI ainda pendente; não houve consulta real à produção. Atenção: o limite `maxPages` pode devolver `complete:false`, que não deve habilitar o gate de inventário. Próximo passo: teste real no emulador e revisão de limites/permissões antes de qualquer uso autorizado.
+
+## Inventário consolidado por lista de usuários
+Criado `v1-retirement-inventory-users.js` para somar relatórios individuais de uma lista explícita de UIDs, retornando apenas contagens, anomalias e número de usuários examinados. Não inclui identificadores no resultado, não descobre usuários automaticamente, não consulta produção e não altera documentos. Teste unitário incluído no CI. **Uma lista incompleta de usuários não permite considerar o inventário global completo**, mesmo se `complete:true` indicar apenas paginação integral da lista fornecida. CI pendente, sem deploy.
