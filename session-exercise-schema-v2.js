@@ -14,7 +14,7 @@ export function splitSessionExercises(session){
   if(!Array.isArray(sets)||sets.length!==2||
      sets.some(s=>typeof s?.done!=='boolean'||(s.completedAt!==null&&typeof s.completedAt!=='string')))
    throw Error('Séries inválidas');
-  return {index,sessionId:session.id,sets:structuredClone(sets)};
+  return {index,sessionId:session.id,revision:0,sets:structuredClone(sets)};
  });
 }
 export function joinSessionExercises(metadata,documents){
