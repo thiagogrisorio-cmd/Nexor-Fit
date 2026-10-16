@@ -40,12 +40,13 @@ export function readV2Workout(metadata,exerciseSnapshots){
  * Change one V2 set using Firestore optimistic transaction retries.
  * The expectedCompletedAt token prevents silently overwriting a remote edit.
  */
-export async function updateV2Set({db,uid,sessionId,exerciseIndex,setIndex,done,expectedCompletedAt,runTransaction,doc,serverTimestamp,now=Date.now()}){
+export async function updateV2Set({db,uid,sessionId,exerciseIndex,setIndex,done,expectedCompletedAt,expectedRevision,runTransaction,doc,serverTimestamp,now=Date.now()}){
  if(!uid||!sessionId||!db||!runTransaction||!doc||!serverTimestamp)throw Error('Parâmetros V2 incompletos');
  if(!Number.isInteger(exerciseIndex)||exerciseIndex<0||exerciseIndex>11)throw Error('Exercício inválido');
  if(!Number.isInteger(setIndex)||setIndex<0||setIndex>1)throw Error('Série inválida');
  if(typeof done!=='boolean')throw Error('Estado inválido');
  if(expectedCompletedAt!==null&&typeof expectedCompletedAt!=='string')throw Error('Versão esperada inválida');
+ if(!Number.isInteger(expectedRevision)||expectedRevision<0)throw Error('Revisão esperada inválida');
  const root=doc(db,'users',uid,'sessions',sessionId);
  const exercise=doc(db,'users',uid,'sessions',sessionId,'exercises',String(exerciseIndex));
  return runTransaction(db,async tx=>{
@@ -55,10 +56,10 @@ export async function updateV2Set({db,uid,sessionId,exerciseIndex,setIndex,done,
   const data=record.data();
   if(data.index!==exerciseIndex||data.sessionId!==sessionId||!Array.isArray(data.sets)||data.sets.length!==2)throw Error('Exercício V2 inválido');
   const current=data.sets[setIndex];
-  if(!current||current.completedAt!==expectedCompletedAt)throw Error('Conflito: série alterada em outro aparelho');
+  if(!current||current.completedAt!==expectedCompletedAt||data.revision!==expectedRevision)throw Error('Conflito: série alterada em outro aparelho');
   const sets=data.sets.map(item=>({...item}));
   sets[setIndex]={done,completedAt:done?new Date(now).toISOString():null};
-  tx.update(exercise,{sets,updatedAt:serverTimestamp()});
+  tx.update(exercise,{sets,revision:expectedRevision+1,updatedAt:serverTimestamp()});
   return sets[setIndex];
  });
 }
