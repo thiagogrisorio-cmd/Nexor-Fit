@@ -80,3 +80,6 @@ CI #581: unit-tests, functions-package, functions-emulator e functions-trigger-e
 
 ## Gate de prontidão para desligar V1
 CI #585: functions-trigger-emulator, functions-emulator, functions-package e unit-tests aprovados; firestore-rules ainda 32/34 por duas falhas V1. Criado `v1-retirement-readiness.js`, checklist que só retorna `ready:true` quando sete evidências explícitas forem confirmadas: inventário de sessões, backups, sessões V1 ativas resolvidas, piloto V2 no navegador, estratégia offline V2, regras V2 e rollback ensaiado. Testes cobrem ausência e cada gate falso. **O checklist não comprova as evidências por si, não altera Firestore e não autoriza deploy automático.** CI do novo commit pendente.
+
+## Inventário V1/V2 (classificador local)
+CI #593 estava em fila na consulta. Criado `v1-retirement-inventory.js` com `inventorySessionRows(rows)` para classificar sessões V1/V2 ativas/concluídas, identificar status/schema desconhecidos e divergência de ID, sem alterar dados. Testes adicionados ao CI. **Ainda não existe coleta paginada de dados reais do Firestore, não foram obtidas contagens reais de usuários nem conferidos backups.** O gate `inventoryComplete` permanece não comprovado. Próxima etapa: leitor Admin somente leitura, paginação por usuário e relatório anonimizado, em ambiente autorizado. Sem deploy.
