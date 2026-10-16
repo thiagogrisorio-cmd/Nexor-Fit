@@ -68,3 +68,6 @@ CI #561 confirmou unit-tests, functions-package e functions-emulator aprovados; 
 
 ## E2E do gatilho Functions (em validação)
 CI #567: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules 32/34 por duas falhas V1. Novo teste em `functions/summary-trigger-firestore.test.mjs` inicializa sessão V2 ativa com 12 exercícios, muda status para `completed` e aguarda até 30s pelo resumo gravado por evento **real** do Functions Emulator. Job CI agora inicia `--only firestore,functions`. O resultado deste teste real ainda não foi confirmado; sem deploy.
+
+## Teste negativo do gatilho V2
+CI #573 consultado com jobs ainda em andamento, functions-package aprovado. Teste E2E reforçado para fazer atualização de metadados enquanto sessão V2 continua ativa e verificar que nenhum resumo prematuro é criado, antes da atualização para `completed` que deve disparar resumo. Essa asserção imediata complementa, mas não substitui, verificação eventual assíncrona de ausência de efeitos; CI do novo commit pendente. V1 permanece bloqueadora; sem deploy.
