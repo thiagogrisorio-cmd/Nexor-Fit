@@ -1,6 +1,6 @@
 import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
 import {loadWorkoutForUI} from './session-ui-loader.js';
-import {createV2Workout} from './session-v2-repository.js';
+import {createV2Workout,updateV2Set} from './session-v2-repository.js';
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {cacheOnlineWorkout,readOfflineWorkout,changeOfflineWorkout,pendingOfflineOperations} from './offline-controller.js';
@@ -13,6 +13,20 @@ let observedSessionId='';
 let v2Notice='';
 let v2ReadOnly=false;
 let v2LoadToken=0;
+const v2PilotEnabled=()=>new URLSearchParams(location.search).get('nexorV2StartPilot')==='1';
+async function editV2PilotSet(exerciseIndex,setIndex){
+ if(!v2PilotEnabled()||!v2ReadOnly||!uid||auth.currentUser?.uid!==uid||!navigator.onLine||!session?.id)throw Error('Edição V2 indisponível');
+ const account=uid,id=session.id;
+ const ref=doc(db,'users',account,'sessions',id,'exercises',String(exerciseIndex));
+ const snapshot=await getDoc(ref);
+ if(!snapshot.exists()||snapshot.data().index!==exerciseIndex||snapshot.data().sessionId!==id)throw Error('Exercício V2 inválido');
+ const row=snapshot.data(),set=row.sets?.[setIndex];
+ if(!set||typeof set.done!=='boolean')throw Error('Série V2 inválida');
+ if(account!==auth.currentUser?.uid||session?.id!==id)throw Error('Sessão alterada');
+ await updateV2Set({db,uid:account,sessionId:id,exerciseIndex,setIndex,done:!set.done,expectedRevision:row.revision,expectedCompletedAt:set.completedAt,runTransaction,doc,serverTimestamp});
+ if(account===auth.currentUser?.uid)await load();
+}
+
 function stopLiveListeners(){
  v2LoadToken++;
  if(stopControlListener){stopControlListener();stopControlListener=null;}
@@ -188,8 +202,9 @@ function render(){
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
  const rest=remainingRest(session);$('sessionRest').textContent=rest?restfmt(rest):'Pronto para a próxima série';
- const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving]);
- if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||v2ReadOnly?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
+ const pilotEdit=v2ReadOnly&&v2PilotEnabled()&&!!uid&&navigator.onLine;
+ const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving,v2ReadOnly,pilotEdit]);
+ if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||(v2ReadOnly&&!pilotEdit)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
  $('finishSession').disabled=saving||offlineSaving||v2ReadOnly;
 }
 export function initSessionUI(getDay){
@@ -212,8 +227,9 @@ export function initSessionUI(getDay){
   }catch(e){console.error('Nexor start:',e);alert('Não foi possível iniciar o treino. Tente novamente.');}
  };
  $('sessionSetList').onclick=async event=>{
-  const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving||v2ReadOnly)return;
+  const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving)return;
   const [i,j]=button.dataset.set.split('-').map(Number);
+  if(v2ReadOnly){try{saving=true;render();await editV2PilotSet(i,j);}catch(e){console.error('V2 set:',e);alert('Não foi possível atualizar a série V2. Atualize a sessão e tente novamente.');}finally{saving=false;render();}return;}
   try{if(await offlineEdit('mark-set',i,j,!session.sets[i][j].done))return;await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
