@@ -1,7 +1,7 @@
 const DB='nexor-fit-offline-v1';
 function openReceipts(){return new Promise((resolve,reject)=>{
  const req=indexedDB.open(DB,2);
- req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('receipts'))db.createObjectStore('receipts',{keyPath:'id'});};
+ req.onupgradeneeded=()=>{const db=req.result;if(!db.objectStoreNames.contains('sessions'))db.createObjectStore('sessions',{keyPath:'id'});if(!db.objectStoreNames.contains('operations')){const store=db.createObjectStore('operations',{keyPath:'id'});store.createIndex('sessionId','sessionId');}if(!db.objectStoreNames.contains('receipts'))db.createObjectStore('receipts',{keyPath:'id'});};
  req.onerror=()=>reject(req.error);
  req.onsuccess=()=>resolve(req.result);
 });}
