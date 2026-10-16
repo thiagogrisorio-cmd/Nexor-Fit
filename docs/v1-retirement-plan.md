@@ -74,3 +74,6 @@ CI #573 consultado com jobs ainda em andamento, functions-package aprovado. Test
 
 ## Estabilização do teste negativo assíncrono
 CI #577 estava em execução (functions-package aprovado) na consulta. O teste E2E aguarda 1,5 s após atualização de sessão ainda ativa antes de confirmar ausência de resumo, permitindo processamento assíncrono do gatilho. Isso reduz falso positivo por leitura imediata, mas não prova ausência absoluta de efeitos tardios. CI novo pendente; produção não alterada.
+
+## Resultado do gatilho E2E e proteção de idempotência
+CI #581: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados. O gatilho real Firestore→Functions→resumo passou. Regras Firestore ainda 32/34: os dois testes V1 falham por validação incompleta dos 12 exercícios. Não remover testes nem publicar regras parciais. Reforçado teste E2E: após criação do resumo, atualizar metadados da sessão já concluída e confirmar que o documento de resumo não é regravado (mesmo updateTime). Novo CI pendente. Plano para liberar: migrar ou encerrar gravações V1, negar novas gravações V1 em regras, executar suíte V1/V2 revisada e então avaliar deploy com backup e rollback. Nenhuma dessas etapas de liberação foi executada.
