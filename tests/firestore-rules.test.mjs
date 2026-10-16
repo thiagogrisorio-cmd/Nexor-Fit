@@ -93,3 +93,12 @@ test('rejects invalid sets in every exercise position, including middle rows',as
   await assertFails(setDoc(doc(db('alice'),'users/alice/sessions/'+id),payload));
  }
 });
+
+test('rejects malformed second set in every V1 exercise row',async()=>{
+ for(const index of [0,3,6,9,11]){
+  const id='invalid-second-'+index;
+  const payload=session(id);
+  payload.sets[index]={items:[{done:false,completedAt:null},{done:'invalid',completedAt:null}]};
+  await assertFails(setDoc(doc(db('alice'),'users/alice/sessions/'+id),payload));
+ }
+});
