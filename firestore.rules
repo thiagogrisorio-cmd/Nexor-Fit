@@ -103,7 +103,7 @@ service cloud.firestore {
         && request.resource.data.sessionId == sessionId
         && validSetPair(request.resource.data.sets)
         && request.resource.data.updatedAt == request.time
-        && exists(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId));
+        && getAfter(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.id == sessionId;
       allow delete: if false;
     }
     match /users/{uid}/sessionControl/{controlId} {
