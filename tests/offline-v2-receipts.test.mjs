@@ -9,3 +9,12 @@ test('receipt survives reopening IndexedDB between writes and reads',async()=>{
  assert.deepEqual(await getReceipt(receipt.id),receipt);
  assert.equal(await getReceipt('missing'),null);
 });
+
+test('receipt remains available after an explicit database close',async()=>{
+ const id='close-reopen-receipt';
+ await saveReceipt({id,revisionAfter:2});
+ const req=indexedDB.open('nexor-fit-offline-v1',2);
+ const db=await new Promise((resolve,reject)=>{req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
+ db.close();
+ assert.equal((await getReceipt(id)).revisionAfter,2);
+});
