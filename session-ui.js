@@ -167,6 +167,13 @@ async function load(){
    if(id){const result=await loadWorkoutForUI({db,uid:accountUid,sessionId:id,doc,getDoc});if(result.format==='v2'||result.status==='incomplete'){v2ReadOnly=true;v2Notice=result.status==='ready'?'Treino V2 em modo somente leitura.':'Treino V2 incompleto. Edição bloqueada.';}loadedSession=result.status==='ready'?result.session:null;}
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
    loadedHistory=rows.docs.filter(row=>row.data().schemaVersion!==2).map(row=>decodeSessionFromFirestore(row.data())).filter(item=>item.status==='completed');
+   if(v2PilotEnabled()){
+    for(const row of rows.docs.filter(item=>item.data().schemaVersion===2&&item.data().status==='completed').slice(0,20)){
+     const result=await loadWorkoutForUI({db,uid:accountUid,sessionId:row.id,doc,getDoc});
+     if(result.status==='ready'&&result.session.status==='completed')loadedHistory.push(result.session);
+    }
+    loadedHistory.sort((a,b)=>String(b.endedAt||'').localeCompare(String(a.endedAt||'')));
+   }
   }else {loadedSession=local();loadedHistory=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
   if(generation!==loadGeneration||accountUid!==uid||saving)return;
   session=loadedSession;completedSessions=loadedHistory;
