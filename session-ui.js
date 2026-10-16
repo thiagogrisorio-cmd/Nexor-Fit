@@ -1,5 +1,6 @@
 import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
 import {loadWorkoutForUI} from './session-ui-loader.js';
+import {createV2Workout} from './session-v2-repository.js';
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {cacheOnlineWorkout,readOfflineWorkout,changeOfflineWorkout,pendingOfflineOperations} from './offline-controller.js';
@@ -198,7 +199,17 @@ export function initSessionUI(getDay){
   if(session?.status==='active'){alert('Conclua seu treino em andamento antes de iniciar outro.');return;}
   const minutes=Number($('restMinutes').value);
   if(!Number.isFinite(minutes)||minutes<0||minutes>10){alert('Escolha entre 0 e 10 minutos.');return;}
-  try{await save(startSession({day:getDay(),restSeconds:Math.round(minutes*60)}));}catch(e){alert('Não foi possível iniciar o treino. Tente novamente.');}
+  try{
+   const next=startSession({day:getDay(),restSeconds:Math.round(minutes*60)});
+   const pilot=new URLSearchParams(location.search).get('nexorV2StartPilot')==='1';
+   if(pilot&&uid&&auth.currentUser?.uid===uid){
+    saving=true;render();
+    try{
+     await createV2Workout({db,uid,session:next,runTransaction,doc,serverTimestamp});
+     await load();
+    }finally{saving=false;render();}
+   }else await save(next);
+  }catch(e){console.error('Nexor start:',e);alert('Não foi possível iniciar o treino. Tente novamente.');}
  };
  $('sessionSetList').onclick=async event=>{
   const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving||v2ReadOnly)return;
