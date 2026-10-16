@@ -53,3 +53,6 @@ CI #518: unit-tests OK; Firestore 32 aprovações e 2 falhas V1. Corrigido impor
 
 ## CI de instalação e importação do Functions
 Adicionado job `functions-package` no GitHub Actions para instalar dependências dentro de `functions`, verificar sintaxe do entrypoint e importar `functions/index.js` com Node 22. Adicionado teste de paridade preliminar de módulo. **Isso não substitui teste end-to-end do gatilho no emulador nem valida concorrência real do Firestore Admin.** CI #533 estava na fila na consulta anterior; CI dos novos commits pendente. Sem deploy.
+
+## Teste integrado Firestore Admin (CI)
+CI #541: unit-tests e functions-package aprovados; firestore-rules 32/34 (duas falhas V1). Adicionado `tests/functions-summary-admin-firestore.test.mjs`, que prepara sessão V2 concluída com 12 filhos no emulador usando Admin SDK, verifica `create`, `unchanged` e conflito de resumo divergente sem sobrescrita. Novo job `functions-emulator` instala dependências do backend e executa o teste via `firebase emulators:exec --only firestore`. **Este teste cobre o executor Admin, não a emissão real do gatilho Functions.** CI novo ainda pendente; não publicar.
