@@ -168,9 +168,9 @@ async function load(){
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
    loadedHistory=rows.docs.filter(row=>row.data().schemaVersion!==2).map(row=>decodeSessionFromFirestore(row.data())).filter(item=>item.status==='completed');
    if(v2PilotEnabled()){
-    for(const row of rows.docs.filter(item=>item.data().schemaVersion===2&&item.data().status==='completed').slice(0,5)){
-     const result=await loadWorkoutForUI({db,uid:accountUid,sessionId:row.id,doc,getDoc});
-     if(result.status==='ready'&&result.session.status==='completed')loadedHistory.push(result.session);
+    for(const row of rows.docs.filter(item=>item.data().schemaVersion===2&&item.data().status==='completed')){
+     const item=row.data();
+     loadedHistory.push({id:row.id,day:item.day,status:item.status,startedAt:item.startedAt,endedAt:item.endedAt,durationSeconds:item.durationSeconds,completedSets:Number.isInteger(item.completedSets)?item.completedSets:null,sets:[]});
     }
     loadedHistory.sort((a,b)=>String(b.endedAt||'').localeCompare(String(a.endedAt||'')));
    }
@@ -198,8 +198,8 @@ async function load(){
 function render(){
  const panel=$('sessionPanel');if(!panel)return;
  const history=$('sessionHistory');
- const historyKeyView=JSON.stringify(completedSessions.map(item=>[item.id,item.status,item.endedAt]));
- if(history && renderedHistoryKey!==historyKeyView){renderedHistoryKey=historyKeyView;history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+' · '+sessionProgress(item).done+' séries</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';}
+ const historyKeyView=JSON.stringify(completedSessions.map(item=>[item.id,item.status,item.endedAt,item.completedSets]));
+ if(history && renderedHistoryKey!==historyKeyView){renderedHistoryKey=historyKeyView;history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+' · '+(Number.isInteger(item.completedSets)?item.completedSets:sessionProgress(item).done)+' séries</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';}
  const current=session?.status==='active'&&session.day===window.nexorActiveDay?.();
  panel.classList.toggle('hidden',!current);
  $('sessionStartPanel').classList.toggle('hidden',!!current);
