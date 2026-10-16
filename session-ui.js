@@ -168,7 +168,7 @@ async function load(){
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
    loadedHistory=rows.docs.filter(row=>row.data().schemaVersion!==2).map(row=>decodeSessionFromFirestore(row.data())).filter(item=>item.status==='completed');
    if(v2PilotEnabled()){
-    for(const row of rows.docs.filter(item=>item.data().schemaVersion===2&&item.data().status==='completed').slice(0,20)){
+    for(const row of rows.docs.filter(item=>item.data().schemaVersion===2&&item.data().status==='completed').slice(0,5)){
      const result=await loadWorkoutForUI({db,uid:accountUid,sessionId:row.id,doc,getDoc});
      if(result.status==='ready'&&result.session.status==='completed')loadedHistory.push(result.session);
     }
