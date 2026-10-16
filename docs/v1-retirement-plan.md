@@ -59,3 +59,6 @@ CI #541: unit-tests e functions-package aprovados; firestore-rules 32/34 (duas f
 
 ## Histórico V2: resumo servidor somente leitura
 Na tela piloto `?nexorV2StartPilot=1`, o histórico agora consulta até cinco resumos mais recentes de sessões V2 concluídas em `sessionSummaries` e usa `completedSets` validado para exibir contagem. Ausência, erro ou resumo inválido mantêm travessão, nunca zero inventado. Sem escrita cliente, sem hidratação dos 12 exercícios por histórico; máximo cinco leituras adicionais por carregamento. Testes do reader adicionados. CI novo pendente; gatilho Functions ainda não validado end-to-end, sem deploy.
+
+## Correção de resolução do Firebase Admin no CI
+CI #555: unit-tests e functions-package aprovados; functions-emulator falhou com `ERR_MODULE_NOT_FOUND` para firebase-admin no teste localizado em `tests/`; firestore-rules 32/34 com falhas V1. Corrigida resolução do Admin SDK com `createRequire(new URL('../functions/package.json', import.meta.url))`, preservando dependências apenas na pasta `functions` e sem usar caminhos internos de node_modules. Novo CI pendente. Sem deploy.
