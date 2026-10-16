@@ -1,3 +1,4 @@
+import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {cacheOnlineWorkout,readOfflineWorkout,changeOfflineWorkout,pendingOfflineOperations} from './offline-controller.js';
@@ -34,7 +35,7 @@ function watchSession(accountUid,id){
 }
 function applyRemoteSession(snapshot,accountUid){
  if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving)return;
-  const remote=snapshot.exists()?snapshot.data():null;
+  const remote=snapshot.exists()?decodeSessionFromFirestore(snapshot.data()):null;
   session=remote?.status==='active'?remote:null;
   if(remote?.status==='completed')completedSessions=[remote,...completedSessions.filter(item=>item.id!==remote.id)];
   render();
@@ -98,14 +99,14 @@ async function save(next, operation=null){
      if(stored.exists() && currentId!==next.id)throw Error('Sessão modificada em outro aparelho');
      if(operation && !stored.exists())throw Error('Sessão não encontrada');
      if(accountUid!==auth.currentUser?.uid)throw Error('Conta alterada durante a gravação');
-     const result=operation?operation(stored.data()):next;
-     tx.set(ref,{...result,updatedAt:serverTimestamp()});
+     const result=operation?operation(decodeSessionFromFirestore(stored.data())):next;
+     tx.set(ref,{...encodeSessionForFirestore(result),updatedAt:serverTimestamp()});
      tx.set(controlRef,{sessionId:result.status==='active'?result.id:'',updatedAt:serverTimestamp()});
    });
    if(accountAtStart!==auth.currentUser?.uid)throw Error('Conta alterada durante a gravação');
    const saved=await getDoc(ref);
    if(!saved.exists())throw Error('Sessão não encontrada após gravação');
-   next=saved.data();
+   next=decodeSessionFromFirestore(saved.data());
    await cacheOnlineWorkout(accountAtStart,next).then(()=>localStorage.setItem(activeCacheKey(accountAtStart),next.status==='active'?next.id:'')).catch(error=>console.warn('Offline cache:',error));
   }else{
    if(operation)next=operation(session);
@@ -125,9 +126,9 @@ async function load(){
   if(uid){
    const control=await getDoc(doc(db,'users',uid,'sessionControl','active'));
    const id=control.exists()?control.data().sessionId:'';
-   if(id){const item=await getDoc(doc(db,'users',accountUid,'sessions',id));loadedSession=item.exists()?item.data():null;}
+   if(id){const item=await getDoc(doc(db,'users',accountUid,'sessions',id));loadedSession=item.exists()?decodeSessionFromFirestore(item.data()):null;}
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
-   loadedHistory=rows.docs.map(row=>row.data()).filter(item=>item.status==='completed');
+   loadedHistory=rows.docs.map(row=>decodeSessionFromFirestore(row.data())).filter(item=>item.status==='completed');
   }else {loadedSession=local();loadedHistory=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
   if(generation!==loadGeneration||accountUid!==uid||saving)return;
   session=loadedSession;completedSessions=loadedHistory;
