@@ -1,0 +1,22 @@
+import {planV2OfflineSetReplay} from './offline-v2-replay.js';
+
+/**
+ * Sync a single durable V2 operation.
+ * Acknowledge/delete only after the server transaction resolves successfully.
+ * On conflict or network failure, preserve the local operation for recovery.
+ */
+export async function syncV2OfflineOperation({operation,readRemoteExercise,updateRemoteSet,acknowledge}){
+ if(!operation||!readRemoteExercise||!updateRemoteSet||!acknowledge)
+  throw Error('Sincronização V2 incompleta');
+ const remote=await readRemoteExercise(operation);
+ const plan=planV2OfflineSetReplay(operation,remote);
+ if(plan.status!=='ready')return {status:'conflict',reason:plan.reason,operationId:operation.id};
+ try{
+  await updateRemoteSet({...operation,expectedRevision:plan.expectedRevision,expectedCompletedAt:plan.expectedCompletedAt});
+ }catch(error){
+  if(error?.message?.includes('Conflito'))return {status:'conflict',reason:'concurrent-update',operationId:operation.id};
+  throw error;
+ }
+ await acknowledge(operation.id);
+ return {status:'synced',operationId:operation.id};
+}

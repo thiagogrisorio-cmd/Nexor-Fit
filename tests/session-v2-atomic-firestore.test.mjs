@@ -1,0 +1,37 @@
+import test,{before,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
+import {doc,writeBatch,getDoc,serverTimestamp} from 'firebase/firestore';
+import {startSession} from '../workout-session.js';
+import {prepareV2SessionDocuments} from '../session-exercise-schema-v2.js';
+let env;
+before(async()=>{env=await initializeTestEnvironment({projectId:'demo-nexor-fit-rules-test',firestore:{rules:readFileSync(new URL('../firestore.rules',import.meta.url),'utf8')}});});
+after(async()=>{if(env)await env.cleanup();});
+const db=uid=>env.authenticatedContext(uid).firestore();
+test('V2 creates metadata and 12 exercise documents atomically',async()=>{
+ const firestore=db('v2owner');
+ const session=startSession({id:'v2-atomic',day:0,now:0});
+ const {metadata,exercises}=prepareV2SessionDocuments(session);
+ const batch=writeBatch(firestore);
+ const root=doc(firestore,'users','v2owner','sessions',session.id);
+ batch.set(root,{...metadata,updatedAt:serverTimestamp()});
+ for(const row of exercises)batch.set(doc(firestore,'users','v2owner','sessions',session.id,'exercises',String(row.index)),{...row,updatedAt:serverTimestamp()});
+ await assertSucceeds(batch.commit());
+ const saved=await assertSucceeds(getDoc(root));
+ assert.equal(saved.data().schemaVersion,2);
+ assert.equal('sets' in saved.data(),false);
+});
+test('V2 rejects incomplete invalid exercise batch without creating parent',async()=>{
+ const firestore=db('v2owner');
+ const session=startSession({id:'v2-invalid',day:0,now:0});
+ const {metadata,exercises}=prepareV2SessionDocuments(session);
+ const batch=writeBatch(firestore);
+ const root=doc(firestore,'users','v2owner','sessions',session.id);
+ batch.set(root,{...metadata,updatedAt:serverTimestamp()});
+ const first={...exercises[0],sets:[{done:'invalid',completedAt:null},{done:false,completedAt:null}]};
+ batch.set(doc(firestore,'users','v2owner','sessions',session.id,'exercises','0'),{...first,updatedAt:serverTimestamp()});
+ await assertFails(batch.commit());
+ const missing=await assertSucceeds(getDoc(root));
+ assert.equal(missing.exists(),false);
+});

@@ -1,0 +1,33 @@
+import {planLegacySessionMigration} from './session-v2-migration-plan.js';
+import {decodeSessionFromFirestore} from './firestore-session-codec.js';
+
+/**
+ * Stages an atomic migration in one Firestore transaction.
+ * IMPORTANT: This is a staging primitive, not enabled in the application.
+ * Backup write requires dedicated Firestore security rules before production use.
+ */
+export async function migrateLegacySessionAtomically({db,uid,sessionId,doc,runTransaction,serverTimestamp}){
+ if(!db||!uid||!sessionId||!doc||!runTransaction||!serverTimestamp)throw Error('Migração incompleta');
+ const parent=doc(db,'users',uid,'sessions',sessionId);
+ const backup=doc(db,'users',uid,'sessionBackups',sessionId);
+ const children=Array.from({length:12},(_,i)=>doc(db,'users',uid,'sessions',sessionId,'exercises',String(i)));
+ return runTransaction(db,async tx=>{
+  // All reads precede all writes, as required by Firestore transactions.
+  const [parentSnapshot,backupSnapshot,...childSnapshots]=await Promise.all([
+   tx.get(parent),tx.get(backup),...children.map(ref=>tx.get(ref))
+  ]);
+  if(!parentSnapshot.exists())throw Error('Sessão original ausente');
+  const original=parentSnapshot.data();
+  if(original.schemaVersion===2)return {status:'already-v2',sessionId};
+  if(backupSnapshot.exists()||childSnapshots.some(s=>s.exists()))
+   return {status:'conflict',sessionId,reason:'migration-target-exists'};
+  const decoded=decodeSessionFromFirestore(original);
+  const plan=planLegacySessionMigration(decoded);
+  if(plan.status!=='ready')return plan;
+  // Preserve original Firestore representation for recovery and audit.
+  tx.set(backup,{sessionId,original,createdAt:serverTimestamp()});
+  tx.set(parent,{...plan.metadata,updatedAt:serverTimestamp()});
+  plan.exercises.forEach((exercise,i)=>tx.set(children[i],{...exercise,updatedAt:serverTimestamp()}));
+  return {status:'migrated',sessionId,checks:plan.checks};
+ });
+}

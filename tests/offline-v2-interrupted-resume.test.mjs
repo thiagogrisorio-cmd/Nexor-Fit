@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {planV2InterruptedResume} from '../offline-v2-interrupted-resume.js';
+const pending={sessionId:'s',exerciseIndex:1,setIndex:1,baseRevision:0,baseCompletedAt:null};
+const remote={sessionId:'s',index:1,revision:1,sets:[{done:true,completedAt:'2026-10-16T12:00:00.000Z'},{done:false,completedAt:null}]};
+const receipt={sessionId:'s',exerciseIndex:1,setIndex:0,done:true,completedAt:'2026-10-16T12:00:00.000Z',revisionBefore:0,revisionAfter:1};
+test('refuses automatic rebase without durable write provenance',()=>assert.equal(planV2InterruptedResume({pending,remote}).status,'manual-review'));
+test('accepts matching prior write receipt',()=>assert.deepEqual(planV2InterruptedResume({pending,remote,receipt}),{status:'ready',expectedRevision:1,expectedCompletedAt:null}));
+test('rejects changed remote prior set',()=>assert.equal(planV2InterruptedResume({pending,remote:{...remote,sets:[{done:false,completedAt:null},remote.sets[1]]},receipt}).status,'conflict'));
+test('accepts unchanged original base without receipt',()=>assert.equal(planV2InterruptedResume({pending,remote:{...remote,revision:0,sets:[{done:false,completedAt:null},remote.sets[1]]}}).status,'ready'));
