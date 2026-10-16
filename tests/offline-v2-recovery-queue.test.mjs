@@ -22,3 +22,9 @@ test('diagnosis classifies matching receipt but keeps operation pending',async()
  assert.equal(result.results[0].status,'candidate-already-applied');
  assert.equal((await listPendingV2Edits(uid)).length,1);
 });
+import {summarizeV2Recovery} from '../offline-v2-recovery-summary.js';
+test('summary distinguishes safe retry from attention needed',()=>{
+ const summary=summarizeV2Recovery({results:[{status:'safe-to-retry'},{status:'manual-review'},{status:'candidate-already-applied'}]});
+ assert.equal(summary.counts.retry,1);
+ assert.equal(summary.requiresAttention,2);
+});
