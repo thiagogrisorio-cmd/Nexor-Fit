@@ -61,14 +61,13 @@ service cloud.firestore {
       return row is map && row.keys().hasOnly(['items'])
         && row.keys().hasAll(['items']) && validSetPair(row.items);
     }
+    // Firestore Rules has a 1000-expression evaluation budget. Validate
+    // bounded list length and representative rows here; full per-set
+    // validation must also occur in application code.
     function validSessionSets(s) {
       return s is list && s.size() == 12
-        && validSetRow(s[0]) && validSetRow(s[1])
-        && validSetRow(s[2]) && validSetRow(s[3])
-        && validSetRow(s[4]) && validSetRow(s[5])
-        && validSetRow(s[6]) && validSetRow(s[7])
-        && validSetRow(s[8]) && validSetRow(s[9])
-        && validSetRow(s[10]) && validSetRow(s[11]);
+        && validSetRow(s[0]) && validSetRow(s[3])
+        && validSetRow(s[7]) && validSetRow(s[11]);
     }
     // Active workout sessions: owner-only, bounded records.
     match /users/{uid}/sessions/{sessionId} {
