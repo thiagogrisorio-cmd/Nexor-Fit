@@ -35,6 +35,10 @@ test('Functions emulator: Firestore update emits completion event and persists s
   batch.set(parent,{id:sessionId,schemaVersion:2,status:'active',day:0,startedAt:'2026-10-16T10:00:00.000Z'});
   for(let i=0;i<12;i++)batch.set(db.doc(`users/${uid}/sessions/${sessionId}/exercises/${i}`),{index:i,sessionId,sets:[{done:true,completedAt:null},{done:false,completedAt:null}]});
   await batch.commit();
+  // A normal metadata update while active must not create a completion summary.
+  await parent.update({durationSeconds:30});
+  const premature=await summary.get();
+  assert.equal(premature.exists,false,'Active session update must not create a summary');
   await parent.update({status:'completed',endedAt:'2026-10-16T10:05:00.000Z',durationSeconds:300});
   let result=null;
   for(let attempt=0;attempt<30;attempt++){
