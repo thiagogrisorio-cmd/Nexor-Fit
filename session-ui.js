@@ -1,6 +1,7 @@
 import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
 import {loadWorkoutForUI} from './session-ui-loader.js';
 import {createV2Workout,updateV2Set} from './session-v2-repository.js';
+import {finishV2Workout} from './session-v2-finish.js';
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {cacheOnlineWorkout,readOfflineWorkout,changeOfflineWorkout,pendingOfflineOperations} from './offline-controller.js';
@@ -205,7 +206,7 @@ function render(){
  const pilotEdit=v2ReadOnly&&v2PilotEnabled()&&!!uid&&navigator.onLine;
  const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving,v2ReadOnly,pilotEdit]);
  if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||(v2ReadOnly&&!pilotEdit)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
- $('finishSession').disabled=saving||offlineSaving||v2ReadOnly;
+ $('finishSession').disabled=saving||offlineSaving||(v2ReadOnly&&!(v2PilotEnabled()&&!!uid&&navigator.onLine));
 }
 export function initSessionUI(getDay){
  window.nexorActiveDay=getDay;
@@ -233,7 +234,17 @@ export function initSessionUI(getDay){
   try{if(await offlineEdit('mark-set',i,j,!session.sets[i][j].done))return;await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
-  if(!session||saving||offlineSaving||v2ReadOnly||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
+  if(!session||saving||offlineSaving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
+  if(v2ReadOnly){
+   if(!v2PilotEnabled()||!uid||auth.currentUser?.uid!==uid||!navigator.onLine)return;
+   const account=uid,id=session.id;
+   try{
+    saving=true;render();
+    await finishV2Workout({db,uid:account,sessionId:id,doc,runTransaction,serverTimestamp});
+   }catch(e){console.error('V2 finish:',e);alert('Não foi possível concluir o treino V2. Verifique a conexão e o estado da sessão.');}
+   finally{saving=false;await load();render();}
+   return;
+  }
   try{if(await offlineEdit('finish'))return;await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
  };
  onAuthStateChanged(auth,()=>{
