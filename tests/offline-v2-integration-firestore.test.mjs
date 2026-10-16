@@ -51,3 +51,29 @@ test('V2 offline queue replays two different sets in one exercise and clears Ind
  assert.equal(saved.revision,2);
  assert.deepEqual(saved.sets.map(s=>s.done),[true,true]);
 });
+
+test('V2 interruption after first commit preserves remaining IndexedDB edit',async()=>{
+ const uid='offline-v2-interrupted',sessionId='offline-v2-interrupted-session';
+ const db=env.authenticatedContext(uid).firestore();
+ await createV2Workout({db,uid,session:startSession({id:sessionId,day:0,now:0}),runTransaction,doc,serverTimestamp});
+ await queueV2SetEdit({uid,id:'first',sessionId,exerciseIndex:2,setIndex:0,done:true,baseRevision:0,baseCompletedAt:null,at:1000});
+ await queueV2SetEdit({uid,id:'second',sessionId,exerciseIndex:2,setIndex:1,done:true,baseRevision:0,baseCompletedAt:null,at:1001});
+ const readRemoteExercise=async op=>(await getDoc(doc(db,'users',uid,'sessions',op.sessionId,'exercises',String(op.exerciseIndex)))).data();
+ let calls=0;
+ const updateRemoteSet=async op=>{
+  calls++;
+  if(calls===2)throw Error('network disconnected');
+  return updateV2Set({db,uid,sessionId:op.sessionId,exerciseIndex:op.exerciseIndex,setIndex:op.setIndex,done:op.done,expectedRevision:op.expectedRevision,expectedCompletedAt:op.expectedCompletedAt,now:op.at,runTransaction,doc,serverTimestamp});
+ };
+ await assert.rejects(syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet}),/network disconnected/);
+ const pending=await listPendingV2Edits(uid);
+ assert.equal(pending.length,1);
+ assert.equal(pending[0].setIndex,1);
+ const remote=await readRemoteExercise({sessionId,exerciseIndex:2});
+ assert.equal(remote.revision,1);
+ assert.deepEqual(remote.sets.map(s=>s.done),[true,false]);
+ const retry=await syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet:async op=>
+  updateV2Set({db,uid,sessionId:op.sessionId,exerciseIndex:op.exerciseIndex,setIndex:op.setIndex,done:op.done,expectedRevision:op.expectedRevision,expectedCompletedAt:op.expectedCompletedAt,now:op.at,runTransaction,doc,serverTimestamp})});
+ assert.equal(retry[0].status,'conflict');
+ assert.equal((await listPendingV2Edits(uid)).length,1);
+});
