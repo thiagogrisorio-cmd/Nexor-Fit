@@ -33,3 +33,17 @@ test('records confirmed remote revision before acknowledging queued edit',async(
  assert.equal(result.status,'synced');
  assert.deepEqual(events,['receipt:op0','ack:op0','receipt:op1','ack:op1']);
 });
+
+test('crash after receipt but before acknowledgement keeps operation unacknowledged',async()=>{
+ const remote=make(),receipts=[],ack=[];
+ await assert.rejects(replayV2RebasedGroup({operations,
+  readRemoteExercise:async()=>structuredClone(remote),
+  updateRemoteSet:async op=>{remote.revision++;remote.sets[op.setIndex]={done:true,completedAt:'2026-10-16T12:00:00.000Z'};},
+  recordReceipt:async receipt=>receipts.push(receipt),
+  acknowledge:async id=>{throw Error('app terminated before queue acknowledgement');}
+ }),/app terminated/);
+ assert.equal(receipts.length,1);
+ assert.equal(receipts[0].id,'op0');
+ assert.equal(remote.revision,5);
+ assert.deepEqual(ack,[]);
+});
