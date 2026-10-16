@@ -130,6 +130,34 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow delete: if false;
     }
+    // Migration backups: created only alongside an actual V2 parent transition.
+    // Immutable and owner-readable; no client update or delete.
+    match /users/{uid}/sessionBackups/{sessionId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && sessionId.matches('^[a-zA-Z0-9-]{1,64}
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && controlId == 'active'
+        && request.resource.data.keys().hasOnly(['sessionId','updatedAt'])
+        && request.resource.data.sessionId is string
+        && request.resource.data.sessionId.size() <= 64
+        && request.resource.data.updatedAt == request.time;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
+)
+        && request.resource.data.keys().hasAll(['sessionId','original','createdAt'])
+        && request.resource.data.keys().hasOnly(['sessionId','original','createdAt'])
+        && request.resource.data.sessionId == sessionId
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.original is map
+        && request.resource.data.original.id == sessionId
+        && !request.resource.data.original.keys().hasAny(['schemaVersion'])
+        && request.resource.data.original.keys().hasAll(['sets'])
+        && getAfter(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.schemaVersion == 2;
+      allow update, delete: if false;
+    }
     match /users/{uid}/sessionControl/{controlId} {
       allow read: if isOwner(uid);
       allow create, update: if isOwner(uid) && controlId == 'active'
