@@ -98,7 +98,7 @@ service cloud.firestore {
     }
     match /users/{uid}/sessions/{sessionId}/exercises/{exerciseId} {
       allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid)
+      allow create: if isOwner(uid)
         && exerciseId in ['0','1','2','3','4','5','6','7','8','9','10','11']
         && request.resource.data.keys().hasAll(['index','sessionId','sets','revision','updatedAt'])
         && request.resource.data.keys().hasOnly(['index','sessionId','sets','revision','updatedAt'])
@@ -107,13 +107,20 @@ service cloud.firestore {
         && request.resource.data.revision is int
         && request.resource.data.revision >= 0
         && request.resource.data.revision <= 1000000000
-        && ( (request.resource.data.revision == 0 && !exists(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)/exercises/$(exerciseId)))
-          || (resource != null && request.resource.data.revision == resource.data.revision + 1) )
         && string(request.resource.data.index) == exerciseId
         && request.resource.data.sessionId == sessionId
         && validSetPair(request.resource.data.sets)
         && request.resource.data.updatedAt == request.time
+        && request.resource.data.revision == 0
         && getAfter(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.id == sessionId;
+      allow update: if isOwner(uid)
+        && request.resource.data.keys().hasAll(['index','sessionId','sets','revision','updatedAt'])
+        && request.resource.data.keys().hasOnly(['index','sessionId','sets','revision','updatedAt'])
+        && request.resource.data.index == resource.data.index
+        && request.resource.data.sessionId == sessionId
+        && request.resource.data.revision == resource.data.revision + 1
+        && validSetPair(request.resource.data.sets)
+        && request.resource.data.updatedAt == request.time;
       allow delete: if false;
     }
     match /users/{uid}/sessionControl/{controlId} {
