@@ -32,3 +32,13 @@ export function joinSessionExercises(metadata,documents){
  if(sets.some(row=>!row))throw Error('Exercícios incompletos');
  return {...metadata,sets};
 }
+
+/**
+ * Convert a legacy V1 session into V2 metadata and twelve exercise payloads.
+ * This is a pure preparation step: callers must persist the documents atomically.
+ */
+export function prepareV2SessionDocuments(session){
+ const exercises=splitSessionExercises(session);
+ const {sets,...metadata}=session;
+ return {metadata:{...metadata,schemaVersion:2},exercises};
+}
