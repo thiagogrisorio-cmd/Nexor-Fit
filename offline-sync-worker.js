@@ -1,3 +1,4 @@
+import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
 // Firestore transaction worker for queued edits. Acknowledgement occurs ONLY after
 // successful commit. Failed/conflicting operations remain in IndexedDB.
 import {auth} from './auth.js';
@@ -36,12 +37,12 @@ async function runSync(){
     const control=await tx.get(controlRef);
     const snapshot=await tx.get(sessionRef);
     if(!snapshot.exists())return {status:'conflict',reason:'missing-session'};
-    const remote=snapshot.data();
+    const remote=decodeSessionFromFirestore(snapshot.data());
     const plan=planOfflineSync(remote,operations);
     if(plan.status==='ready'){
      const activeId=control.exists()?control.data().sessionId:'';
      if(activeId!==sessionId)return {status:'conflict',reason:'active-session-changed'};
-     tx.set(sessionRef,{...plan.session,updatedAt:serverTimestamp()});
+     tx.set(sessionRef,{...encodeSessionForFirestore(plan.session),updatedAt:serverTimestamp()});
      tx.set(controlRef,{sessionId:plan.session.status==='active'?sessionId:'',updatedAt:serverTimestamp()});
     }
     return plan;
