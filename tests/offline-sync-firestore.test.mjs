@@ -91,5 +91,5 @@ test('concurrent edit of same set does not overwrite Firestore data',async()=>{
   op('local','sync-same-set','mark-set',t+1000,0,0,true)
  ]);
  assert.equal(result.status,'conflict');
- assert.equal((await getDoc(sessionRef)).data().sets[0][0].completedAt,new Date(t).toISOString());
+ assert.equal(decodeSessionFromFirestore((await getDoc(sessionRef)).data()).sets[0][0].completedAt,new Date(t).toISOString());
 });
