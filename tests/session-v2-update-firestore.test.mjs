@@ -20,3 +20,20 @@ test('V2 Firestore transaction updates one set and increments revision',async()=
  assert.equal(current.data().sets[0].done,true);
  await assert.rejects(updateV2Set(args),/Conflito/);
 });
+
+test('two devices using same revision cannot both overwrite one V2 set',async()=>{
+ const uid='concurrent-revision-user',sessionId='concurrent-revision-session';
+ const first=env.authenticatedContext(uid).firestore();
+ const second=env.authenticatedContext(uid).firestore();
+ await assertSucceeds(createV2Workout({db:first,uid,session:startSession({id:sessionId,day:0,now:0}),runTransaction,doc,serverTimestamp}));
+ const base={uid,sessionId,exerciseIndex:2,setIndex:1,expectedCompletedAt:null,expectedRevision:0,runTransaction,doc,serverTimestamp,now:1000};
+ const outcomes=await Promise.allSettled([
+  updateV2Set({...base,db:first,done:true}),
+  updateV2Set({...base,db:second,done:true})
+ ]);
+ assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1);
+ assert.equal(outcomes.filter(x=>x.status==='rejected').length,1);
+ const record=await assertSucceeds(getDoc(doc(first,'users',uid,'sessions',sessionId,'exercises','2')));
+ assert.equal(record.data().revision,1);
+ assert.equal(record.data().sets[1].done,true);
+});
