@@ -37,6 +37,8 @@ test('Functions emulator: Firestore update emits completion event and persists s
   await batch.commit();
   // A normal metadata update while active must not create a completion summary.
   await parent.update({durationSeconds:30});
+  // Allow asynchronous Firestore events to run before checking for unwanted side effects.
+  await new Promise(resolve=>setTimeout(resolve,1500));
   const premature=await summary.get();
   assert.equal(premature.exists,false,'Active session update must not create a summary');
   await parent.update({status:'completed',endedAt:'2026-10-16T10:05:00.000Z',durationSeconds:300});
