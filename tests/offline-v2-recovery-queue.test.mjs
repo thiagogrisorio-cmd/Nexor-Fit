@@ -13,3 +13,12 @@ test('diagnosis preserves pending operation',async()=>{
  assert.equal(result.results[0].status,'safe-to-retry');
  assert.equal((await listPendingV2Edits(uid)).length,1);
 });
+import {saveReceipt} from '../offline-v2-receipts.js';
+test('diagnosis classifies matching receipt but keeps operation pending',async()=>{
+ const uid='recovery-receipt-unique',sessionId='receipt-session';
+ const op=await queueV2SetEdit({uid,id:'second',sessionId,exerciseIndex:1,setIndex:0,done:true,baseRevision:0,baseCompletedAt:null,at:2});
+ await saveReceipt({id:op.id,sessionId,exerciseIndex:1,setIndex:0,revisionBefore:0,revisionAfter:1,done:true,completedAt:'stamp'});
+ const result=await inspectV2RecoveryQueue({uid,readRemoteExercise:async()=>({sessionId,index:1,revision:1,sets:[{done:true,completedAt:'stamp'},{done:false,completedAt:null}]})});
+ assert.equal(result.results[0].status,'candidate-already-applied');
+ assert.equal((await listPendingV2Edits(uid)).length,1);
+});
