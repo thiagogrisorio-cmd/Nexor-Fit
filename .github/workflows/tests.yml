@@ -30,3 +30,16 @@ jobs:
           java-version: '21'
       - run: npm install
       - run: npm run test:rules
+  functions-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+        working-directory: functions
+      - run: node --check index.js
+        working-directory: functions
+      - run: node --input-type=module -e "await import('./index.js'); console.log('Functions entrypoint loaded')"
+        working-directory: functions
