@@ -103,3 +103,14 @@ test('V2 recovery diagnosis detects changed remote revision and preserves local 
  assert.equal(report.results[0].status,'manual-review');
  assert.equal((await listPendingV2Edits(uid)).length,1);
 });
+
+test('V2 recovery diagnosis isolates pending operations by authenticated user',async()=>{
+ const {inspectV2RecoveryQueue}=await import('../offline-v2-recovery-queue.js');
+ const owner='recovery-account-owner',other='recovery-account-other',sessionId='recovery-account-session';
+ const db=env.authenticatedContext(owner).firestore();
+ await createV2Workout({db,uid:owner,session:startSession({id:sessionId,day:0,now:0}),runTransaction,doc,serverTimestamp});
+ await queueV2SetEdit({uid:owner,id:'private',sessionId,exerciseIndex:6,setIndex:0,done:true,baseRevision:0,baseCompletedAt:null,at:100});
+ const report=await inspectV2RecoveryQueue({uid:other,readRemoteExercise:async()=>{throw Error('cross-account read');}});
+ assert.equal(report.total,0);
+ assert.equal((await listPendingV2Edits(owner)).length,1);
+});
