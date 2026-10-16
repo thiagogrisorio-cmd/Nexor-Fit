@@ -40,3 +40,11 @@ test('after simulated restart, a persisted receipt remains a review candidate',a
  assert.equal(after.results[0].status,'candidate-already-applied');
  assert.equal((await listPendingV2Edits(uid)).length,1);
 });
+
+test('network failure leaves offline edit available for later inspection',async()=>{
+ const uid='recovery-network-unique';
+ await queueV2SetEdit({uid,id:'network',sessionId:'net-session',exerciseIndex:2,setIndex:1,done:true,baseRevision:0,baseCompletedAt:null,at:4});
+ const report=await inspectV2RecoveryQueue({uid,readRemoteExercise:async()=>{throw Error('offline');}});
+ assert.equal(report.results[0].status,'unavailable');
+ assert.equal((await listPendingV2Edits(uid)).length,1);
+});
