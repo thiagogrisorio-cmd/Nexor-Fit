@@ -62,3 +62,6 @@ Na tela piloto `?nexorV2StartPilot=1`, o histórico agora consulta até cinco re
 
 ## Correção de resolução do Firebase Admin no CI
 CI #555: unit-tests e functions-package aprovados; functions-emulator falhou com `ERR_MODULE_NOT_FOUND` para firebase-admin no teste localizado em `tests/`; firestore-rules 32/34 com falhas V1. Corrigida resolução do Admin SDK com `createRequire(new URL('../functions/package.json', import.meta.url))`, preservando dependências apenas na pasta `functions` e sem usar caminhos internos de node_modules. Novo CI pendente. Sem deploy.
+
+## Gatilho de conclusão V2: teste com Firestore Emulator
+CI #561 confirmou unit-tests, functions-package e functions-emulator aprovados; Firestore rules 32/34 (duas falhas V1). Adicionado teste integrado do adaptador de evento em `functions/summary-trigger-firestore.test.mjs`, com Admin SDK real apontando ao Firestore Emulator: transição active→completed cria resumo, repetição retorna unchanged, evento completed→completed é ignorado e logs são registrados. Novo job `functions-trigger-emulator` no CI. **O teste invoca o handler com evento simulado: ainda não valida a emissão automática do evento pelo emulador Functions.** CI novo pendente, sem deploy.
