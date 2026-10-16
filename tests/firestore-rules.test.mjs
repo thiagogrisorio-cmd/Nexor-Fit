@@ -86,7 +86,7 @@ test('simultaneous starts share one active-session pointer',async()=>{
 });
 
 test('rejects invalid sets in every exercise position, including middle rows',async()=>{
- for(const index of [0,1,4,6,8,10,11]){
+ for(const index of Array.from({length:12},(_,index)=>index)){
   const id='invalid-row-'+index;
   const payload=session(id);
   payload.sets[index]={items:[{done:'invalid',completedAt:null},{done:false,completedAt:null}]};
