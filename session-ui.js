@@ -47,6 +47,7 @@ const key='nexor_fit_active_session_v1',historyKey='nexor_fit_sessions_v1';
 const $=id=>document.getElementById(id);
 let session=null, saving=false, ready=false, uid=null, completedSessions=[];
 let renderedSetKey='',renderedHistoryKey='';
+let offlineSaving=false;
 const activeCacheKey=account=>'nexor_fit_offline_active_'+account;
 const notifyQueue=()=>window.dispatchEvent(new Event('nexor-offline-queue-changed'));
 async function offlineEdit(kind,exercise,set,done){
@@ -54,7 +55,11 @@ async function offlineEdit(kind,exercise,set,done){
  if(!account||!session?.id)throw Error('Sessão offline indisponível');
  const pending=await pendingOfflineOperations(account);
  if(navigator.onLine&&!pending.some(item=>item.sessionId===session.id))return false;
- const next=await changeOfflineWorkout({scope:account,sessionId:session.id,kind,exercise,set,done});
+ if(offlineSaving)throw Error('Alteração local em andamento');
+ offlineSaving=true;render();
+ let next;
+ try{next=await changeOfflineWorkout({scope:account,sessionId:session.id,kind,exercise,set,done});}
+ finally{offlineSaving=false;render();}
  session=next;
  if(next.status==='completed')completedSessions=[next,...completedSessions.filter(item=>item.id!==next.id)];
  notifyQueue();render();
@@ -150,9 +155,9 @@ function render(){
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
  const rest=remainingRest(session);$('sessionRest').textContent=rest?restfmt(rest):'Pronto para a próxima série';
- const setKey=JSON.stringify([session.id,session.sets,saving]);
- if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
- $('finishSession').disabled=saving;
+ const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving]);
+ if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
+ $('finishSession').disabled=saving||offlineSaving;
 }
 export function initSessionUI(getDay){
  window.nexorActiveDay=getDay;
@@ -164,12 +169,12 @@ export function initSessionUI(getDay){
   try{await save(startSession({day:getDay(),restSeconds:Math.round(minutes*60)}));}catch(e){alert('Não foi possível iniciar o treino. Tente novamente.');}
  };
  $('sessionSetList').onclick=async event=>{
-  const button=event.target.closest('[data-set]');if(!button||saving)return;
+  const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving)return;
   const [i,j]=button.dataset.set.split('-').map(Number);
   try{if(await offlineEdit('mark-set',i,j,!session.sets[i][j].done))return;await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
-  if(!session||saving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
+  if(!session||saving||offlineSaving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
   try{if(await offlineEdit('finish'))return;await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
  };
  onAuthStateChanged(auth,()=>{
