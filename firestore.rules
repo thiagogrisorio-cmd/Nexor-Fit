@@ -101,15 +101,14 @@ service cloud.firestore {
       allow create, update: if isOwner(uid)
         && exerciseId in ['0','1','2','3','4','5','6','7','8','9','10','11']
         && request.resource.data.keys().hasAll(['index','sessionId','sets','revision','updatedAt'])
-        && request.resource.data.keys().hasOnly(['index','sessionId','sets','updatedAt'])
+        && request.resource.data.keys().hasOnly(['index','sessionId','sets','revision','updatedAt'])
         && request.resource.data.index is int
         && request.resource.data.index >= 0 && request.resource.data.index <= 11
         && request.resource.data.revision is int
         && request.resource.data.revision >= 0
         && request.resource.data.revision <= 1000000000
-        && (request.resource.data.revision == 0 && !exists(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)/exercises/$(exerciseId))
-          || (exists(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)/exercises/$(exerciseId))
-            && request.resource.data.revision == resource.data.revision + 1))
+        && ( (request.resource.data.revision == 0 && !exists(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)/exercises/$(exerciseId)))
+          || (resource != null && request.resource.data.revision == resource.data.revision + 1) )
         && string(request.resource.data.index) == exerciseId
         && request.resource.data.sessionId == sessionId
         && validSetPair(request.resource.data.sets)
