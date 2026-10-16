@@ -4,7 +4,7 @@ import {planV2SequentialRebase} from './offline-v2-sequential-rebase.js';
  * Replay a group of independent set edits. Each acknowledged operation is
  * removed only after a successful remote write. Stops at first conflict.
  */
-export async function replayV2RebasedGroup({operations,readRemoteExercise,updateRemoteSet,acknowledge}){
+export async function replayV2RebasedGroup({operations,readRemoteExercise,updateRemoteSet,acknowledge,recordReceipt}){
  if(!operations?.length||!readRemoteExercise||!updateRemoteSet||!acknowledge)
   throw Error('Reconciliação incompleta');
  const initial=await readRemoteExercise(operations[0]);
@@ -23,6 +23,16 @@ export async function replayV2RebasedGroup({operations,readRemoteExercise,update
    if(error?.message?.includes('Conflito'))
     return {status:'conflict',reason:'concurrent-update',processed};
    throw error;
+  }
+  if(recordReceipt){
+   const confirmed=await readRemoteExercise(step.operation);
+   const set=confirmed.sets?.[step.operation.setIndex];
+   if(confirmed.revision!==step.expectedRevision+1||set?.done!==step.operation.done)
+    return {status:'conflict',reason:'confirmation-mismatch',processed};
+   await recordReceipt({id:step.operation.id,sessionId:step.operation.sessionId,
+    exerciseIndex:step.operation.exerciseIndex,setIndex:step.operation.setIndex,
+    done:set.done,completedAt:set.completedAt,revisionBefore:step.expectedRevision,
+    revisionAfter:confirmed.revision});
   }
   await acknowledge(step.operation.id);
   processed++;
