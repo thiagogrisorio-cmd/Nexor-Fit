@@ -19,7 +19,7 @@ test('receipt remains available after an explicit database close',async()=>{
  assert.equal((await getReceipt(id)).revisionAfter,2);
 });
 
-test('receipt store upgrades an existing version-one database',async()=>{
+test('receipt store exists after reopening version-two database',async()=>{
  const name='nexor-fit-offline-v1';
  const existing=await new Promise((resolve,reject)=>{const req=indexedDB.open(name,2);req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
  assert.ok(existing.objectStoreNames.contains('receipts'));
