@@ -24,3 +24,26 @@ test('Functions event adapter: completed V2 writes summary and repeated event is
   assert.equal(messages.length,3);
  }finally{await deleteApp(app);}
 });
+
+// The handler test above simulates an event. The following check observes an actual Functions emulator trigger.
+test('Functions emulator: Firestore update emits completion event and persists summary',{skip:!emulator||!process.env.FUNCTIONS_EMULATOR},async()=>{
+ const app=initializeApp({projectId:'demo-nexor-fit-rules-test'},'summary-live-trigger-test');
+ try{
+  const db=getFirestore(app),uid='summary-live-trigger-test',sessionId='live-completion';
+  const parent=db.doc(`users/${uid}/sessions/${sessionId}`),summary=db.doc(`users/${uid}/sessionSummaries/${sessionId}`);
+  const batch=db.batch();
+  batch.set(parent,{id:sessionId,schemaVersion:2,status:'active',day:0,startedAt:'2026-10-16T10:00:00.000Z'});
+  for(let i=0;i<12;i++)batch.set(db.doc(`users/${uid}/sessions/${sessionId}/exercises/${i}`),{index:i,sessionId,sets:[{done:true,completedAt:null},{done:false,completedAt:null}]});
+  await batch.commit();
+  await parent.update({status:'completed',endedAt:'2026-10-16T10:05:00.000Z',durationSeconds:300});
+  let result=null;
+  for(let attempt=0;attempt<30;attempt++){
+   const snapshot=await summary.get();
+   if(snapshot.exists){result=snapshot.data();break;}
+   await new Promise(resolve=>setTimeout(resolve,1000));
+  }
+  assert.ok(result,'Firestore completion must trigger a persisted summary within 30 seconds');
+  assert.equal(result.completedSets,12);
+  assert.equal(result.totalSets,24);
+ }finally{await deleteApp(app);}
+});
