@@ -51,5 +51,13 @@ test('Functions emulator: Firestore update emits completion event and persists s
   assert.ok(result,'Firestore completion must trigger a persisted summary within 30 seconds');
   assert.equal(result.completedSets,12);
   assert.equal(result.totalSets,24);
+  // A later metadata update must not rewrite the immutable summary.
+  const firstSnapshot=await summary.get();
+  const firstUpdateTime=firstSnapshot.updateTime.toMillis();
+  await parent.update({durationSeconds:301});
+  await new Promise(resolve=>setTimeout(resolve,1500));
+  const afterUpdate=await summary.get();
+  assert.equal(afterUpdate.data().completedSets,12);
+  assert.equal(afterUpdate.updateTime.toMillis(),firstUpdateTime,'Completed-to-completed updates must not rewrite summary');
  }finally{await deleteApp(app);}
 });
