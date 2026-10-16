@@ -1,6 +1,7 @@
 import {makeV2OfflineSetOperation} from './offline-v2-replay.js';
 import {inspectV2PendingEdits} from './offline-v2-queue-preflight.js';
 import {syncV2OfflineOperation} from './offline-v2-sync.js';
+import {replayV2RebasedGroup} from './offline-v2-rebased-sync.js';
 import {enqueueOfflineOperation,listOfflineOperations,removeOfflineOperation} from './offline-store.js';
 
 /**
@@ -24,7 +25,25 @@ export async function syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet
  if(!uid||!readRemoteExercise||!updateRemoteSet)throw Error('Sincronização incompleta');
  const pending=await listPendingV2Edits(uid);
  const preflight=inspectV2PendingEdits(pending);
- if(!preflight.safeToReplay)return [{status:'conflict',reason:'offline-queue-requires-rebase',issues:preflight.issues}];
+ if(!preflight.safeToReplay){
+  if(preflight.issues.some(issue=>issue.status!=='requires-sequential-rebase'))
+   return [{status:'conflict',reason:'offline-queue-invalid',issues:preflight.issues}];
+  const groups=new Map();
+  for(const operation of pending){
+   const key=operation.sessionId+':'+operation.exerciseIndex;
+   if(!groups.has(key))groups.set(key,[]);
+   groups.get(key).push(operation);
+  }
+  const results=[];
+  for(const group of groups.values()){
+   const result=group.length>1
+    ?await replayV2RebasedGroup({operations:group,readRemoteExercise,updateRemoteSet,acknowledge:removeOfflineOperation})
+    :await syncV2OfflineOperation({operation:group[0],readRemoteExercise,updateRemoteSet,acknowledge:removeOfflineOperation});
+   results.push(result);
+   if(result.status==='conflict')break;
+  }
+  return results;
+ }
  const results=[];
  for(const operation of pending){
   const result=await syncV2OfflineOperation({
