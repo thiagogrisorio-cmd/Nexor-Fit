@@ -77,3 +77,16 @@ test('V2 interruption after first commit preserves remaining IndexedDB edit',asy
  assert.equal(retry[0].status,'conflict');
  assert.equal((await listPendingV2Edits(uid)).length,1);
 });
+
+test('V2 recovery diagnosis reads emulator state without removing pending edit',async()=>{
+ const {inspectV2RecoveryQueue}=await import('../offline-v2-recovery-queue.js');
+ const uid='recovery-emulator',sessionId='recovery-emulator-session';
+ const db=env.authenticatedContext(uid).firestore();
+ await createV2Workout({db,uid,session:startSession({id:sessionId,day:0,now:0}),runTransaction,doc,serverTimestamp});
+ await queueV2SetEdit({uid,id:'recovery',sessionId,exerciseIndex:4,setIndex:0,done:true,baseRevision:0,baseCompletedAt:null,at:100});
+ const readRemoteExercise=async op=>(await getDoc(doc(db,'users',uid,'sessions',op.sessionId,'exercises',String(op.exerciseIndex)))).data();
+ const report=await inspectV2RecoveryQueue({uid,readRemoteExercise});
+ assert.equal(report.total,1);
+ assert.equal(report.results[0].status,'safe-to-retry');
+ assert.equal((await listPendingV2Edits(uid)).length,1);
+});
