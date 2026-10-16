@@ -4,7 +4,7 @@ export async function inventoryAuthUsers({auth,db,batchSize=100,maxBatches=10,se
  if(!auth||typeof auth.listUsers!=='function'||!db||!Number.isInteger(batchSize)||batchSize<1||batchSize>1000||!Number.isInteger(maxBatches)||maxBatches<1)throw Error('Parâmetros de descoberta inválidos');
  const counts={total:0,v1Active:0,v1Completed:0,v2Active:0,v2Completed:0,unknown:0};
  const issueCounts={'id-mismatch':0,'unsupported-schema-or-status':0};
- let token,usersScanned=0,batches=0,complete=false;
+ let token,usersScanned=0,batches=0,complete=false,allSessionPagesComplete=true;
  const seen=new Set();
  while(batches<maxBatches){
   const page=await auth.listUsers(batchSize,token);
@@ -16,8 +16,8 @@ export async function inventoryAuthUsers({auth,db,batchSize=100,maxBatches=10,se
   for(const key of Object.keys(counts))counts[key]+=report.counts[key];
   for(const key of Object.keys(issueCounts))issueCounts[key]+=report.issueCounts[key];
   usersScanned+=report.usersScanned;batches++;
-  if(!report.complete)complete=false;
-  if(!page.pageToken){complete=report.complete;break;}
+  if(!report.complete)allSessionPagesComplete=false;
+  if(!page.pageToken){complete=allSessionPagesComplete;break;}
   if(page.pageToken===token)throw Error('Cursor Auth repetido');
   token=page.pageToken;
  }
