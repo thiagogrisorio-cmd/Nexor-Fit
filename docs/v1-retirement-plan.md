@@ -50,3 +50,6 @@ CI #506: unit-tests OK; Firestore 32/34, duas falhas V1. Adicionados `functions/
 
 ## Empacotamento Functions autocontido
 CI #518: unit-tests OK; Firestore 32 aprovações e 2 falhas V1. Corrigido import do entrypoint para dentro de `functions/`; copiados para a pasta os módulos de gatilho, evento, executor, plano e cálculo, evitando imports fora da raiz de deploy. Adicionado teste unitário de importação da árvore interna de dependências. **Ainda não foi testado o pacote real com `npm install` dentro de functions nem o emulador Functions integrado.** Cópias de código exigem disciplina de sincronização futura (ou etapa de build automatizada). Não publicar.
+
+## CI de instalação e importação do Functions
+Adicionado job `functions-package` no GitHub Actions para instalar dependências dentro de `functions`, verificar sintaxe do entrypoint e importar `functions/index.js` com Node 22. Adicionado teste de paridade preliminar de módulo. **Isso não substitui teste end-to-end do gatilho no emulador nem valida concorrência real do Firestore Admin.** CI #533 estava na fila na consulta anterior; CI dos novos commits pendente. Sem deploy.
