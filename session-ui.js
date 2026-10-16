@@ -229,7 +229,7 @@ export function initSessionUI(getDay){
  $('sessionSetList').onclick=async event=>{
   const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving)return;
   const [i,j]=button.dataset.set.split('-').map(Number);
-  if(v2ReadOnly){try{saving=true;render();await editV2PilotSet(i,j);}catch(e){console.error('V2 set:',e);alert('Não foi possível atualizar a série V2. Atualize a sessão e tente novamente.');}finally{saving=false;render();}return;}
+  if(v2ReadOnly){try{saving=true;render();await editV2PilotSet(i,j);}catch(e){console.error('V2 set:',e);alert('Não foi possível atualizar a série V2. Atualize a sessão e tente novamente.');}finally{saving=false;await load();render();}return;}
   try{if(await offlineEdit('mark-set',i,j,!session.sets[i][j].done))return;await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
