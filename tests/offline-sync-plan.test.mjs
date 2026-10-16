@@ -58,5 +58,21 @@ test('does not acknowledge active session edits with a different timestamp',()=>
  const op=makeOfflineOperation({id:'a',sessionId:'session-1',kind:'mark-set',exercise:0,set:0,done:true,at:2000});
  const remote=planOfflineSync(base(),[op]).session;
  remote.sets[0][0].completedAt=new Date(5000).toISOString();
- assert.equal(planOfflineSync(remote,[op]).status,'ready');
+ assert.equal(planOfflineSync(remote,[op]).status,'conflict');
+});
+
+test('concurrent remote completion of same set requires review',()=>{
+ const remote=base();
+ remote.sets[0][0]={done:true,completedAt:new Date(3500).toISOString()};
+ const op=makeOfflineOperation({id:'local',sessionId:'session-1',kind:'mark-set',exercise:0,set:0,done:true,at:2000});
+ assert.equal(planOfflineSync(remote,[op]).reason,'concurrent-set-change');
+});
+test('nonoverlapping remote edits are preserved',()=>{
+ const remote=base();
+ remote.sets[1][0]={done:true,completedAt:new Date(1500).toISOString()};
+ const op=makeOfflineOperation({id:'local',sessionId:'session-1',kind:'mark-set',exercise:0,set:0,done:true,at:2000});
+ const result=planOfflineSync(remote,[op]);
+ assert.equal(result.status,'ready');
+ assert.equal(result.session.sets[1][0].done,true);
+ assert.equal(result.session.sets[0][0].done,true);
 });
