@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initializeApp,deleteApp} from 'firebase-admin/app';
-import {getFirestore} from 'firebase-admin/firestore';
+import {initializeApp,deleteApp} from '../functions/node_modules/firebase-admin/app/index.js';
+import {getFirestore} from '../functions/node_modules/firebase-admin/firestore/index.js';
 import {executeV2Summary} from '../functions/session-v2-summary-executor.js';
 const emulator=process.env.FIRESTORE_EMULATOR_HOST;
 test('Admin emulator: V2 summary is created once and conflict is rejected',{skip:!emulator},async()=>{
