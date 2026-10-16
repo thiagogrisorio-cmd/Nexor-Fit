@@ -67,3 +67,28 @@ test('other account cannot read or synchronize a session',async()=>{
  const unauthorized=doc(db('bob'),sessionRef.path);
  await assert.rejects(getDoc(unauthorized));
 });
+
+test('retry after partial queue acknowledgement leaves completed workout unchanged',async()=>{
+ const firestore=db('alice'),{sessionRef,controlRef}=await seed(firestore,'sync-partial');
+ const t=Date.parse('2026-10-15T12:05:00Z');
+ const operations=[
+  op('first','sync-partial','mark-set',t,0,0,true),
+  op('second','sync-partial','mark-set',t+1000,0,1,true),
+  op('last','sync-partial','finish',t+2000)
+ ];
+ assert.equal((await sync(firestore,sessionRef,controlRef,operations)).status,'ready');
+ assert.equal((await sync(firestore,sessionRef,controlRef,operations.slice(1))).status,'already-applied');
+ assert.equal((await sync(firestore,sessionRef,controlRef,operations.slice(2))).status,'already-applied');
+ assert.equal((await getDoc(sessionRef)).data().status,'completed');
+});
+test('concurrent edit of same set does not overwrite Firestore data',async()=>{
+ const firestore=db('alice'),{sessionRef,controlRef}=await seed(firestore,'sync-same-set');
+ const t=Date.parse('2026-10-15T12:06:00Z');
+ const remote=markSet(base('sync-same-set'),0,0,true,t);
+ await setDoc(sessionRef,{...remote,updatedAt:serverTimestamp()});
+ const result=await sync(firestore,sessionRef,controlRef,[
+  op('local','sync-same-set','mark-set',t+1000,0,0,true)
+ ]);
+ assert.equal(result.status,'conflict');
+ assert.equal((await getDoc(sessionRef)).data().sets[0][0].completedAt,new Date(t).toISOString());
+});
