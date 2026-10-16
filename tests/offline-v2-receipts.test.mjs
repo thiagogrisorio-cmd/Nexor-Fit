@@ -25,3 +25,12 @@ test('receipt store exists after reopening version-two database',async()=>{
  assert.ok(existing.objectStoreNames.contains('receipts'));
  existing.close();
 });
+
+test('receipt-first initialization creates sessions and operations stores too',async()=>{
+ const req=indexedDB.open('nexor-fit-offline-v1',2);
+ const db=await new Promise((resolve,reject)=>{req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});
+ assert.ok(db.objectStoreNames.contains('sessions'));
+ assert.ok(db.objectStoreNames.contains('operations'));
+ assert.ok(db.transaction('operations').objectStore('operations').indexNames.contains('sessionId'));
+ db.close();
+});
