@@ -9,7 +9,7 @@ after(async()=>{if(env)await env.cleanup();});
 const db=uid=>env.authenticatedContext(uid).firestore();
 const parent='users/alice/sessions/v2-session';
 const path=index=>parent+'/exercises/'+index;
-const payload=index=>({index,sessionId:'v2-session',sets:[{done:false,completedAt:null},{done:true,completedAt:'2026-10-16T12:00:00.000Z'}],updatedAt:serverTimestamp()});
+const payload=index=>({index,sessionId:'v2-session',revision:0,sets:[{done:false,completedAt:null},{done:true,completedAt:'2026-10-16T12:00:00.000Z'}],updatedAt:serverTimestamp()});
 test('v2: owner writes both sets and other account cannot read',async()=>{
  await env.withSecurityRulesDisabled(async context=>{
   await setDoc(doc(context.firestore(),parent),{id:'v2-session'});
