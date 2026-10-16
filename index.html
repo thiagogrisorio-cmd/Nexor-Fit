@@ -73,6 +73,11 @@ document.getElementById('goHome').onclick=()=>show('home');document.getElementBy
 document.getElementById('newSession').onclick=async()=>{if(!confirm('Iniciar nova sessão do Treino '+names[active]+'? As marcações serão zeradas, mas as cargas e o histórico serão preservados.'))return;if(cloud?.signedIn()){await cloud.reset(active);return;}days[active][2].forEach((_,i)=>{const k=active+'-'+i;progress[k]={...(progress[k]||{}),done:false}});sessionDone[active]=false;persist();renderWorkout()};
 show('home');
 import('./offline-status.js').then(({initOfflineStatus})=>initOfflineStatus()).catch(console.error);
+if(new URLSearchParams(location.search).get('nexorV2Diagnostics')==='1'){
+ const target=document.getElementById('offlineV2RecoveryStatus');
+ target.hidden=false;
+ import('./offline-v2-recovery-browser.js').then(({installV2RecoveryDiagnostics})=>installV2RecoveryDiagnostics({target,enabled:true})).catch(error=>{console.error('V2 diagnostics:',error);target.textContent='Diagnóstico V2 indisponível.';});
+}
 import('./session-ui.js').then(({initSessionUI})=>{window.nexorSessionUI=initSessionUI(()=>active)}).catch(console.error);
 function localData(){return {progress:read('nexor_fb4_state',{}),logs:read('nexor_fit_completion_log',[]),sessionDone:read('nexor_fit_session_done',{})}}
 function loadData(data){progress=data.progress;logs=data.logs;sessionDone=data.sessionDone;if(screen==='home')renderHome();else if(screen==='workouts')renderSelect();else renderWorkout()}
