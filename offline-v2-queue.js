@@ -1,6 +1,7 @@
 import {makeV2OfflineSetOperation} from './offline-v2-replay.js';
 import {inspectV2PendingEdits} from './offline-v2-queue-preflight.js';
 import {syncV2OfflineOperation} from './offline-v2-sync.js';
+import {saveReceipt} from './offline-v2-receipts.js';
 import {replayV2RebasedGroup} from './offline-v2-rebased-sync.js';
 import {enqueueOfflineOperation,listOfflineOperations,removeOfflineOperation} from './offline-store.js';
 
@@ -37,7 +38,7 @@ export async function syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet
   const results=[];
   for(const group of groups.values()){
    const result=group.length>1
-    ?await replayV2RebasedGroup({operations:group,readRemoteExercise,updateRemoteSet,acknowledge:removeOfflineOperation})
+    ?await replayV2RebasedGroup({operations:group,readRemoteExercise,updateRemoteSet,acknowledge:removeOfflineOperation,recordReceipt:saveReceipt})
     :await syncV2OfflineOperation({operation:group[0],readRemoteExercise,updateRemoteSet,acknowledge:removeOfflineOperation});
    results.push(result);
    if(result.status==='conflict')break;
