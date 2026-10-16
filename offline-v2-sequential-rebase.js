@@ -9,7 +9,7 @@ export function planV2SequentialRebase(operations,remote){
  const first=ordered[0];
  if(ordered.some(op=>op.sessionId!==first.sessionId||op.exerciseIndex!==first.exerciseIndex||
   op.kind!=='v2-mark-set'||!Number.isInteger(op.setIndex)||op.setIndex<0||op.setIndex>1||
-  typeof op.done!=='boolean))return {status:'conflict',reason:'invalid-group'};
+  typeof op.done!=='boolean'))return {status:'conflict',reason:'invalid-group'};
  if(remote.sessionId!==first.sessionId||remote.index!==first.exerciseIndex||
   remote.revision!==first.baseRevision)return {status:'conflict',reason:'remote-revision-changed'};
  if(ordered.some(op=>op.baseRevision!==first.baseRevision))
