@@ -36,6 +36,16 @@ export function planOfflineSync(remote,operations){
   return {status:'already-applied',session:remote,operationIds:ordered.map(op=>op.id)};
  if(remote.status==='completed')return {status:'conflict',reason:'remote-completed'};
  if(remote.status!=='active')return {status:'conflict',reason:'invalid-remote-state'};
+ // A remote set completed on another device must never be overwritten silently.
+ // Without a shared base revision, concurrent edits to the same set require review.
+ for(const op of ordered){
+  if(op.kind!=='mark-set')continue;
+  const current=remote.sets?.[op.exercise]?.[op.set];
+  if(!current)return {status:'conflict',reason:'invalid-set'};
+  if(current.done||current.completedAt!==null){
+   return {status:'conflict',reason:'concurrent-set-change'};
+  }
+ }
  try{
   const next=replayOfflineOperations(remote,ordered,{markSet,finishSession});
   return {status:'ready',session:next,operationIds:ordered.map(op=>op.id)};
