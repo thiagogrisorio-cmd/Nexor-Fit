@@ -56,3 +56,6 @@ Adicionado job `functions-package` no GitHub Actions para instalar dependências
 
 ## Teste integrado Firestore Admin (CI)
 CI #541: unit-tests e functions-package aprovados; firestore-rules 32/34 (duas falhas V1). Adicionado `tests/functions-summary-admin-firestore.test.mjs`, que prepara sessão V2 concluída com 12 filhos no emulador usando Admin SDK, verifica `create`, `unchanged` e conflito de resumo divergente sem sobrescrita. Novo job `functions-emulator` instala dependências do backend e executa o teste via `firebase emulators:exec --only firestore`. **Este teste cobre o executor Admin, não a emissão real do gatilho Functions.** CI novo ainda pendente; não publicar.
+
+## Histórico V2: resumo servidor somente leitura
+Na tela piloto `?nexorV2StartPilot=1`, o histórico agora consulta até cinco resumos mais recentes de sessões V2 concluídas em `sessionSummaries` e usa `completedSets` validado para exibir contagem. Ausência, erro ou resumo inválido mantêm travessão, nunca zero inventado. Sem escrita cliente, sem hidratação dos 12 exercícios por histórico; máximo cinco leituras adicionais por carregamento. Testes do reader adicionados. CI novo pendente; gatilho Functions ainda não validado end-to-end, sem deploy.
