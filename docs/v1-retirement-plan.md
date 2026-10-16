@@ -65,3 +65,6 @@ CI #555: unit-tests e functions-package aprovados; functions-emulator falhou com
 
 ## Gatilho de conclusão V2: teste com Firestore Emulator
 CI #561 confirmou unit-tests, functions-package e functions-emulator aprovados; Firestore rules 32/34 (duas falhas V1). Adicionado teste integrado do adaptador de evento em `functions/summary-trigger-firestore.test.mjs`, com Admin SDK real apontando ao Firestore Emulator: transição active→completed cria resumo, repetição retorna unchanged, evento completed→completed é ignorado e logs são registrados. Novo job `functions-trigger-emulator` no CI. **O teste invoca o handler com evento simulado: ainda não valida a emissão automática do evento pelo emulador Functions.** CI novo pendente, sem deploy.
+
+## E2E do gatilho Functions (em validação)
+CI #567: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules 32/34 por duas falhas V1. Novo teste em `functions/summary-trigger-firestore.test.mjs` inicializa sessão V2 ativa com 12 exercícios, muda status para `completed` e aguarda até 30s pelo resumo gravado por evento **real** do Functions Emulator. Job CI agora inicia `--only firestore,functions`. O resultado deste teste real ainda não foi confirmado; sem deploy.
