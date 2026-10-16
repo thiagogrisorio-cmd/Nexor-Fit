@@ -96,6 +96,7 @@ const local=()=>{try{return JSON.parse(localStorage.getItem(key))}catch{return n
 const fmt=seconds=>[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
 const restfmt=seconds=>String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
 async function save(next, operation=null){
+ if(v2ReadOnly)throw Error('Sessão V2 somente leitura');
  if(saving)throw Error('Aguarde a gravação anterior');
  const accountAtStart=uid;
  saving=true;render();
