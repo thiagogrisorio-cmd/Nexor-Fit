@@ -116,9 +116,16 @@ service cloud.firestore {
       allow update: if isOwner(uid)
         && request.resource.data.keys().hasAll(['index','sessionId','sets','revision','updatedAt'])
         && request.resource.data.keys().hasOnly(['index','sessionId','sets','revision','updatedAt'])
+        && resource.data.sessionId == sessionId
+        && resource.data.index is int
+        && string(resource.data.index) == exerciseId
         && request.resource.data.index == resource.data.index
         && request.resource.data.sessionId == sessionId
+        && resource.data.revision is int
+        && resource.data.revision >= 0 && resource.data.revision < 1000000000
         && request.resource.data.revision == resource.data.revision + 1
+        && get(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.schemaVersion == 2
+        && get(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.status == 'active'
         && validSetPair(request.resource.data.sets)
         && request.resource.data.updatedAt == request.time;
       allow delete: if false;
