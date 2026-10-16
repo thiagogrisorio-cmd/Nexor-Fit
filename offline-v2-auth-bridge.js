@@ -19,14 +19,14 @@ export function installV2AuthSync({auth,onAuthStateChanged,readRemoteExercise,up
  const unsubscribe=onAuthStateChanged(auth,user=>{currentUid=user?.uid||null;run();});
  if(typeof window!=='undefined'){
   window.addEventListener('online',run);
-  document.addEventListener('visibilitychange',run);
+  if(typeof document!=='undefined')document.addEventListener('visibilitychange',run);
  }
  return ()=>{
   disposed=true;currentUid=null;
   unsubscribe();
   if(typeof window!=='undefined'){
    window.removeEventListener('online',run);
-   document.removeEventListener('visibilitychange',run);
+   if(typeof document!=='undefined')document.removeEventListener('visibilitychange',run);
   }
  };
 }
