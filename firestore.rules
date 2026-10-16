@@ -94,39 +94,14 @@ service cloud.firestore {
               && request.resource.data.startedAt == resource.data.startedAt
               && request.resource.data.day == resource.data.day));
     }
-    // V2: each exercise is a separate, fully validated document.
-    // Legacy session storage remains unchanged until migration is tested.
     match /users/{uid}/sessions/{sessionId}/exercises/{exerciseId} {
       allow read: if isOwner(uid);
       allow create, update: if isOwner(uid)
-        && sessionId.matches('^[a-zA-Z0-9-]{1,64}
-      allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid) && controlId == 'active'
-        && request.resource.data.keys().hasOnly(['sessionId','updatedAt'])
-        && request.resource.data.sessionId is string
-        && request.resource.data.sessionId.size() <= 64
-        && request.resource.data.updatedAt == request.time;
-    }
-    match /{document=**} { allow read, write: if false; }
-  }
-}
-)
-        && exerciseId.matches('^(0|1|2|3|4|5|6|7|8|9|10|11)
-      allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid) && controlId == 'active'
-        && request.resource.data.keys().hasOnly(['sessionId','updatedAt'])
-        && request.resource.data.sessionId is string
-        && request.resource.data.sessionId.size() <= 64
-        && request.resource.data.updatedAt == request.time;
-    }
-    match /{document=**} { allow read, write: if false; }
-  }
-}
-)
+        && exerciseId in ['0','1','2','3','4','5','6','7','8','9','10','11']
         && request.resource.data.keys().hasAll(['index','sessionId','sets','updatedAt'])
         && request.resource.data.keys().hasOnly(['index','sessionId','sets','updatedAt'])
         && request.resource.data.index is int
-        && string(request.resource.data.index) == exerciseId
+        && request.resource.data.index >= 0 && request.resource.data.index <= 11
         && request.resource.data.sessionId == sessionId
         && validSetPair(request.resource.data.sets)
         && request.resource.data.updatedAt == request.time
