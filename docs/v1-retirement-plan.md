@@ -23,3 +23,6 @@ Com `?nexorV2StartPilot=1`, sessões V2 autenticadas permitem marcar/desmarcar s
 
 ## Piloto de conclusão e histórico V2
 Com o mesmo parâmetro do piloto e autenticação, o botão Concluir usa `finishV2Workout` somente online. A transação exige 12 exercícios íntegros e ponteiro ativo consistente, registra `endedAt`/`durationSeconds` e limpa o ponteiro. O histórico do piloto passa a reconstruir sessões V2 concluídas (até 20 recentes) e mantém sessões V1. Não foi liberado offline V2. Exige validação do CI e teste de navegador antes de publicação.
+
+## Concorrência e custo de histórico — marco seguinte
+Incluído teste no emulador simulando dois contextos autenticados com o mesmo UID e mesma revisão inicial: apenas uma transação de alteração da mesma série deve confirmar; a outra deve ser rejeitada, sem perder integridade. A execução em CI ainda precisa confirmar o teste. Para limitar leituras adicionais no piloto, a reconstrução do histórico V2 foi reduzida de 20 para **5 sessões concluídas** por carregamento (até 60 leituras de exercícios, além de metadados). É mitigação temporária, não paginação nem solução definitiva de custo. Permanecem 2 falhas V1 conhecidas no CI #451 e proibição de deploy.
