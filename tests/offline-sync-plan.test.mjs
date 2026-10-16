@@ -29,3 +29,34 @@ test('mismatched sessions require conflict resolution',()=>{
  const op=makeOfflineOperation({id:'a',sessionId:'other',kind:'finish',at:4000});
  assert.equal(planOfflineSync(base(),[op]).status,'conflict');
 });
+
+test('recovers from crash after remote commit of multiple edits and finish',()=>{
+ const ops=[
+  makeOfflineOperation({id:'a',sessionId:'session-1',kind:'mark-set',exercise:0,set:0,done:true,at:2000}),
+  makeOfflineOperation({id:'b',sessionId:'session-1',kind:'mark-set',exercise:0,set:1,done:true,at:3000}),
+  makeOfflineOperation({id:'c',sessionId:'session-1',kind:'finish',at:4000})
+ ];
+ const first=planOfflineSync(base(),ops);
+ assert.equal(first.status,'ready');
+ assert.equal(planOfflineSync(first.session,ops).status,'already-applied');
+ assert.deepEqual(planOfflineSync(first.session,ops).operationIds,['a','b','c']);
+});
+test('recovers from crash after active session set commit',()=>{
+ const op=makeOfflineOperation({id:'a',sessionId:'session-1',kind:'mark-set',exercise:0,set:0,done:true,at:2000});
+ const first=planOfflineSync(base(),[op]);
+ assert.equal(planOfflineSync(first.session,[op]).status,'already-applied');
+});
+test('does not acknowledge coincidental completed time when a set differs',()=>{
+ const ops=[
+  makeOfflineOperation({id:'a',sessionId:'session-1',kind:'mark-set',exercise:0,set:0,done:true,at:2000}),
+  makeOfflineOperation({id:'b',sessionId:'session-1',kind:'finish',at:4000})
+ ];
+ const remote={...base(),status:'completed',endedAt:new Date(4000).toISOString()};
+ assert.equal(planOfflineSync(remote,ops).status,'conflict');
+});
+test('does not acknowledge active session edits with a different timestamp',()=>{
+ const op=makeOfflineOperation({id:'a',sessionId:'session-1',kind:'mark-set',exercise:0,set:0,done:true,at:2000});
+ const remote=planOfflineSync(base(),[op]).session;
+ remote.sets[0][0].completedAt=new Date(5000).toISOString();
+ assert.equal(planOfflineSync(remote,[op]).status,'ready');
+});
