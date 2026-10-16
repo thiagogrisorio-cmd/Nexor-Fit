@@ -89,3 +89,6 @@ Adicionado `v1-retirement-inventory-admin.js`, que recebe uma instância autoriz
 
 ## Inventário consolidado por lista de usuários
 Criado `v1-retirement-inventory-users.js` para somar relatórios individuais de uma lista explícita de UIDs, retornando apenas contagens, anomalias e número de usuários examinados. Não inclui identificadores no resultado, não descobre usuários automaticamente, não consulta produção e não altera documentos. Teste unitário incluído no CI. **Uma lista incompleta de usuários não permite considerar o inventário global completo**, mesmo se `complete:true` indicar apenas paginação integral da lista fornecida. CI pendente, sem deploy.
+
+## Descoberta limitada via Firebase Auth
+CI #627 confirmou unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules ainda falha por duas verificações V1. Implementado `inventoryAuthUsers` usando `auth.listUsers` com tamanho e número máximo de lotes, agregação sem UID no resultado e indicação `complete:false` se a paginação Auth ou de sessões for interrompida. Testes cobrem duas páginas, limite e UID duplicado. **Somente usuários enumeráveis pelo Firebase Auth entram no escopo**; contas/sessões órfãs no Firestore não estão cobertas. Não foi executado contra produção. CI novo pendente, sem deploy.
