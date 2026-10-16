@@ -1,4 +1,5 @@
 import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
+import {loadWorkoutForUI} from './session-ui-loader.js';
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {cacheOnlineWorkout,readOfflineWorkout,changeOfflineWorkout,pendingOfflineOperations} from './offline-controller.js';
@@ -8,6 +9,8 @@ const db=getFirestore();
 let loadGeneration=0;
 let stopControlListener=null, stopSessionListener=null;
 let observedSessionId='';
+let v2Notice='';
+let v2ReadOnly=false;
 function stopLiveListeners(){
  if(stopControlListener){stopControlListener();stopControlListener=null;}
  if(stopSessionListener){stopSessionListener();stopSessionListener=null;}
@@ -35,7 +38,20 @@ function watchSession(accountUid,id){
 }
 function applyRemoteSession(snapshot,accountUid){
  if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving)return;
-  const remote=snapshot.exists()?decodeSessionFromFirestore(snapshot.data()):null;
+  if(snapshot.exists()&&snapshot.data().schemaVersion===2){
+  v2ReadOnly=true;
+  v2Notice='Treino V2 detectado. Carregando exercícios em modo somente leitura.';
+  render();
+  loadWorkoutForUI({db,uid:accountUid,sessionId:snapshot.id,doc,getDoc}).then(result=>{
+   if(uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
+   v2Notice=result.status==='ready'?'Treino V2 carregado em modo somente leitura. Edição ainda indisponível.':'Treino V2 incompleto ou indisponível. Nenhuma alteração foi realizada.';
+   session=result.status==='ready'&&result.session.status==='active'?result.session:null;
+   render();
+  }).catch(error=>{console.error('Nexor V2:',error);v2Notice='Não foi possível carregar o treino V2 com segurança.';render();});
+  return;
+ }
+ v2ReadOnly=false;v2Notice='';
+ const remote=snapshot.exists()?decodeSessionFromFirestore(snapshot.data()):null;
   session=remote?.status==='active'?remote:null;
   if(remote?.status==='completed')completedSessions=[remote,...completedSessions.filter(item=>item.id!==remote.id)];
   render();
@@ -120,15 +136,15 @@ async function save(next, operation=null){
 }
 async function load(){
  const generation=++loadGeneration;
- uid=auth.currentUser?.uid||null;const accountUid=uid;ready=false;session=null;completedSessions=[];render();
+ uid=auth.currentUser?.uid||null;const accountUid=uid;ready=false;session=null;completedSessions=[];v2Notice='';v2ReadOnly=false;render();
  let loadedSession=null,loadedHistory=[];
  try{
   if(uid){
    const control=await getDoc(doc(db,'users',uid,'sessionControl','active'));
    const id=control.exists()?control.data().sessionId:'';
-   if(id){const item=await getDoc(doc(db,'users',accountUid,'sessions',id));loadedSession=item.exists()?decodeSessionFromFirestore(item.data()):null;}
+   if(id){const result=await loadWorkoutForUI({db,uid:accountUid,sessionId:id,doc,getDoc});if(result.format==='v2'||result.status==='incomplete'){v2ReadOnly=true;v2Notice=result.status==='ready'?'Treino V2 em modo somente leitura.':'Treino V2 incompleto. Edição bloqueada.';}loadedSession=result.status==='ready'?result.session:null;}
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
-   loadedHistory=rows.docs.map(row=>decodeSessionFromFirestore(row.data())).filter(item=>item.status==='completed');
+   loadedHistory=rows.docs.filter(row=>row.data().schemaVersion!==2).map(row=>decodeSessionFromFirestore(row.data())).filter(item=>item.status==='completed');
   }else {loadedSession=local();loadedHistory=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
   if(generation!==loadGeneration||accountUid!==uid||saving)return;
   session=loadedSession;completedSessions=loadedHistory;
@@ -159,32 +175,32 @@ function render(){
  panel.classList.toggle('hidden',!current);
  $('sessionStartPanel').classList.toggle('hidden',!!current);
  if(session?.status==='active'&&!current)$('sessionMessage').textContent='Há um treino em andamento. Abra o Treino '+String.fromCharCode(65+session.day)+' para continuar.';
- else $('sessionMessage').textContent='';
- $('sessionStartPanel').querySelector('button').disabled=!ready||saving||session?.status==='active';
+ else $('sessionMessage').textContent=v2Notice;
+ $('sessionStartPanel').querySelector('button').disabled=!ready||saving||v2ReadOnly||session?.status==='active';
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
  const rest=remainingRest(session);$('sessionRest').textContent=rest?restfmt(rest):'Pronto para a próxima série';
  const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving]);
- if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
- $('finishSession').disabled=saving||offlineSaving;
+ if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||v2ReadOnly?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
+ $('finishSession').disabled=saving||offlineSaving||v2ReadOnly;
 }
 export function initSessionUI(getDay){
  window.nexorActiveDay=getDay;
  $('startSession').onclick=async()=>{
-  if(!ready||saving)return;
+  if(!ready||saving||v2ReadOnly)return;
   if(session?.status==='active'){alert('Conclua seu treino em andamento antes de iniciar outro.');return;}
   const minutes=Number($('restMinutes').value);
   if(!Number.isFinite(minutes)||minutes<0||minutes>10){alert('Escolha entre 0 e 10 minutos.');return;}
   try{await save(startSession({day:getDay(),restSeconds:Math.round(minutes*60)}));}catch(e){alert('Não foi possível iniciar o treino. Tente novamente.');}
  };
  $('sessionSetList').onclick=async event=>{
-  const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving)return;
+  const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving||v2ReadOnly)return;
   const [i,j]=button.dataset.set.split('-').map(Number);
   try{if(await offlineEdit('mark-set',i,j,!session.sets[i][j].done))return;await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
-  if(!session||saving||offlineSaving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
+  if(!session||saving||offlineSaving||v2ReadOnly||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
   try{if(await offlineEdit('finish'))return;await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
  };
  onAuthStateChanged(auth,()=>{
