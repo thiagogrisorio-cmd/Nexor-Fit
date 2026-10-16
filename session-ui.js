@@ -16,7 +16,14 @@ function watchSession(accountUid,id){
  if(observedSessionId===id)return;
  if(stopSessionListener){stopSessionListener();stopSessionListener=null;}
  observedSessionId=id;
- if(!id){if(!saving){session=null;render();}return;}
+ if(!id){
+  if(!saving)pendingOfflineOperations(accountUid).then(pending=>{
+   if(uid!==accountUid||saving||auth.currentUser?.uid!==accountUid)return;
+   if(session?.id&&pending.some(op=>op.sessionId===session.id))return;
+   session=null;render();
+  }).catch(console.warn);
+  return;
+ }
  stopSessionListener=onSnapshot(doc(db,'users',accountUid,'sessions',id),snapshot=>{
   if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving||snapshot.metadata.hasPendingWrites)return;
   pendingOfflineOperations(accountUid).then(pending=>{
@@ -39,7 +46,9 @@ function watchControl(accountUid){
   if(uid!==accountUid||auth.currentUser?.uid!==accountUid||snapshot.metadata.hasPendingWrites)return;
   const id=snapshot.exists()?snapshot.data().sessionId:'';
   watchSession(accountUid,id);
-  if(!id&&!saving&&session?.status==='active')load();
+  if(!id&&!saving&&session?.status==='active')pendingOfflineOperations(accountUid).then(pending=>{
+   if(uid===accountUid&&!saving&&!pending.some(op=>op.sessionId===session?.id))load();
+  }).catch(console.warn);
  },error=>console.error('Nexor live control:',error));
 }
 
