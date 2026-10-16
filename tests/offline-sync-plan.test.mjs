@@ -76,3 +76,23 @@ test('nonoverlapping remote edits are preserved',()=>{
  assert.equal(result.session.sets[1][0].done,true);
  assert.equal(result.session.sets[0][0].done,true);
 });
+
+test('partial queue deletion after commit still acknowledges remaining operations',()=>{
+ const ops=[
+  makeOfflineOperation({id:'first',sessionId:'session-1',kind:'mark-set',exercise:0,set:0,done:true,at:2000}),
+  makeOfflineOperation({id:'second',sessionId:'session-1',kind:'mark-set',exercise:0,set:1,done:true,at:3000}),
+  makeOfflineOperation({id:'finish',sessionId:'session-1',kind:'finish',at:4000})
+ ];
+ const remote=planOfflineSync(base(),ops).session;
+ assert.equal(planOfflineSync(remote,ops.slice(1)).status,'already-applied');
+ assert.equal(planOfflineSync(remote,ops.slice(2)).status,'already-applied');
+});
+test('different remote value cannot be acknowledged as the same offline batch',()=>{
+ const ops=[
+  makeOfflineOperation({id:'first',sessionId:'session-1',kind:'mark-set',exercise:0,set:0,done:true,at:2000}),
+  makeOfflineOperation({id:'finish',sessionId:'session-1',kind:'finish',at:4000})
+ ];
+ const remote=planOfflineSync(base(),ops).session;
+ remote.sets[0][0].completedAt=new Date(3000).toISOString();
+ assert.equal(planOfflineSync(remote,ops).status,'conflict');
+});
