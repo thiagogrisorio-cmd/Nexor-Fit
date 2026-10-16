@@ -130,23 +130,11 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time;
       allow delete: if false;
     }
-    // Migration backups: created only alongside an actual V2 parent transition.
-    // Immutable and owner-readable; no client update or delete.
+    // Immutable migration backups, owner-readable.
     match /users/{uid}/sessionBackups/{sessionId} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid)
-        && sessionId.matches('^[a-zA-Z0-9-]{1,64}
-      allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid) && controlId == 'active'
-        && request.resource.data.keys().hasOnly(['sessionId','updatedAt'])
-        && request.resource.data.sessionId is string
-        && request.resource.data.sessionId.size() <= 64
-        && request.resource.data.updatedAt == request.time;
-    }
-    match /{document=**} { allow read, write: if false; }
-  }
-}
-)
+        && sessionId.size() >= 1 && sessionId.size() <= 64
         && request.resource.data.keys().hasAll(['sessionId','original','createdAt'])
         && request.resource.data.keys().hasOnly(['sessionId','original','createdAt'])
         && request.resource.data.sessionId == sessionId
