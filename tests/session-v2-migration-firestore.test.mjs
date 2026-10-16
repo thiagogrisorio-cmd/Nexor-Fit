@@ -1,0 +1,26 @@
+import test,{before,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
+import {doc,setDoc,getDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {startSession} from '../workout-session.js';
+import {encodeSessionForFirestore} from '../firestore-session-codec.js';
+import {migrateLegacySessionAtomically} from '../session-v2-migration-transaction.js';
+let env;
+before(async()=>{env=await initializeTestEnvironment({projectId:'demo-nexor-fit-v2-backup',firestore:{rules:readFileSync(new URL('../firestore.rules',import.meta.url),'utf8')}});});
+after(async()=>{if(env)await env.cleanup();});
+test('atomic migration keeps immutable V1 backup and creates 12 V2 children',async()=>{
+ const uid='backup-owner',id='backup-session',db=env.authenticatedContext(uid).firestore();
+ const original=startSession({id,day:0,now:0});
+ await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
+ const result=await assertSucceeds(migrateLegacySessionAtomically({db,uid,sessionId:id,doc,runTransaction,serverTimestamp}));
+ assert.equal(result.status,'migrated');
+ const backup=doc(db,'users',uid,'sessionBackups',id);
+ const saved=await assertSucceeds(getDoc(backup));
+ assert.equal(saved.data().original.id,id);
+ assert.equal((await getDoc(doc(db,'users',uid,'sessions',id))).data().schemaVersion,2);
+ for(let i=0;i<12;i++)assert.equal((await getDoc(doc(db,'users',uid,'sessions',id,'exercises',String(i)))).data().index,i);
+ await assertFails(updateDoc(backup,{sessionId:'changed'}));
+ await assertFails(deleteDoc(backup));
+ await assertFails(getDoc(doc(env.authenticatedContext('other-user').firestore(),'users',uid,'sessionBackups',id)));
+});
