@@ -1,5 +1,5 @@
 // IndexedDB storage for offline workout sessions and a durable mutation queue.
-const DB_NAME='nexor-fit-offline-v1',VERSION=1;
+const DB_NAME='nexor-fit-offline-v1',VERSION=2;
 let connection;
 function database(){
  if(!('indexedDB' in globalThis))return Promise.reject(Error('IndexedDB indisponível'));
@@ -8,6 +8,7 @@ function database(){
   request.onupgradeneeded=()=>{
    const db=request.result;
    if(!db.objectStoreNames.contains('sessions'))db.createObjectStore('sessions',{keyPath:'id'});
+   if(!db.objectStoreNames.contains('receipts'))db.createObjectStore('receipts',{keyPath:'id'});
    if(!db.objectStoreNames.contains('operations')){
     const store=db.createObjectStore('operations',{keyPath:'id'});
     store.createIndex('sessionId','sessionId');
