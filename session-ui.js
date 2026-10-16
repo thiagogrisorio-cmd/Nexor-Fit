@@ -11,13 +11,16 @@ let stopControlListener=null, stopSessionListener=null;
 let observedSessionId='';
 let v2Notice='';
 let v2ReadOnly=false;
+let v2LoadToken=0;
 function stopLiveListeners(){
+ v2LoadToken++;
  if(stopControlListener){stopControlListener();stopControlListener=null;}
  if(stopSessionListener){stopSessionListener();stopSessionListener=null;}
  observedSessionId='';
 }
 function watchSession(accountUid,id){
  if(observedSessionId===id)return;
+ v2LoadToken++;
  if(stopSessionListener){stopSessionListener();stopSessionListener=null;}
  observedSessionId=id;
  if(!id){
@@ -42,12 +45,13 @@ function applyRemoteSession(snapshot,accountUid){
   v2ReadOnly=true;
   v2Notice='Treino V2 detectado. Carregando exercícios em modo somente leitura.';
   render();
+  const token=++v2LoadToken;
   loadWorkoutForUI({db,uid:accountUid,sessionId:snapshot.id,doc,getDoc}).then(result=>{
-   if(uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
+   if(token!==v2LoadToken||uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
    v2Notice=result.status==='ready'?'Treino V2 carregado em modo somente leitura. Edição ainda indisponível.':'Treino V2 incompleto ou indisponível. Nenhuma alteração foi realizada.';
    session=result.status==='ready'&&result.session.status==='active'?result.session:null;
    render();
-  }).catch(error=>{console.error('Nexor V2:',error);v2Notice='Não foi possível carregar o treino V2 com segurança.';render();});
+  }).catch(error=>{if(token!==v2LoadToken||uid!==accountUid)return;console.error('Nexor V2:',error);v2Notice='Não foi possível carregar o treino V2 com segurança.';render();});
   return;
  }
  v2ReadOnly=false;v2Notice='';
@@ -77,6 +81,7 @@ let offlineSaving=false;
 const activeCacheKey=account=>'nexor_fit_offline_active_'+account;
 const notifyQueue=()=>window.dispatchEvent(new Event('nexor-offline-queue-changed'));
 async function offlineEdit(kind,exercise,set,done){
+ if(v2ReadOnly)throw Error('Sessão V2 somente leitura');
  const account=auth.currentUser?.uid;
  if(!account||!session?.id)throw Error('Sessão offline indisponível');
  const pending=await pendingOfflineOperations(account);
