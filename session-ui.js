@@ -2,6 +2,7 @@ import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-
 import {loadWorkoutForUI} from './session-ui-loader.js';
 import {createV2Workout,updateV2Set} from './session-v2-repository.js';
 import {finishV2Workout} from './session-v2-finish.js';
+import {loadV2Summary} from './session-v2-summary-reader.js';
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {cacheOnlineWorkout,readOfflineWorkout,changeOfflineWorkout,pendingOfflineOperations} from './offline-controller.js';
@@ -173,6 +174,14 @@ async function load(){
      loadedHistory.push({id:row.id,day:item.day,status:item.status,startedAt:item.startedAt,endedAt:item.endedAt,durationSeconds:item.durationSeconds,completedSets:Number.isInteger(item.completedSets)?item.completedSets:null,schemaVersion:2,sets:[]});
     }
     loadedHistory.sort((a,b)=>String(b.endedAt||'').localeCompare(String(a.endedAt||'')));
+    // Bound summary reads to the five newest V2 workouts; never hydrate exercise documents for history.
+    const recentV2=loadedHistory.filter(item=>item.schemaVersion===2).slice(0,5);
+    await Promise.all(recentV2.map(async item=>{
+     try{
+      const summary=await loadV2Summary({db,uid:accountUid,sessionId:item.id,doc,getDoc});
+      if(summary)item.completedSets=summary.completedSets;
+     }catch(error){console.warn('Resumo V2 indisponível:',error);}
+    }));
    }
   }else {loadedSession=local();loadedHistory=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
   if(generation!==loadGeneration||accountUid!==uid||saving)return;
