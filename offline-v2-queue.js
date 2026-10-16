@@ -1,4 +1,5 @@
 import {makeV2OfflineSetOperation} from './offline-v2-replay.js';
+import {inspectV2PendingEdits} from './offline-v2-queue-preflight.js';
 import {syncV2OfflineOperation} from './offline-v2-sync.js';
 import {enqueueOfflineOperation,listOfflineOperations,removeOfflineOperation} from './offline-store.js';
 
@@ -22,6 +23,8 @@ export async function listPendingV2Edits(uid){
 export async function syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet}){
  if(!uid||!readRemoteExercise||!updateRemoteSet)throw Error('Sincronização incompleta');
  const pending=await listPendingV2Edits(uid);
+ const preflight=inspectV2PendingEdits(pending);
+ if(!preflight.safeToReplay)return [{status:'conflict',reason:'offline-queue-requires-rebase',issues:preflight.issues}];
  const results=[];
  for(const operation of pending){
   const result=await syncV2OfflineOperation({
