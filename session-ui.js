@@ -206,8 +206,8 @@ export function initSessionUI(getDay){
     saving=true;render();
     try{
      await createV2Workout({db,uid,session:next,runTransaction,doc,serverTimestamp});
-     await load();
     }finally{saving=false;render();}
+    await load();
    }else await save(next);
   }catch(e){console.error('Nexor start:',e);alert('Não foi possível iniciar o treino. Tente novamente.');}
  };
