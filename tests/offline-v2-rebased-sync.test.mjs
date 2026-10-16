@@ -23,3 +23,13 @@ test('rejects repeated edits to same set without any writes',async()=>{
   updateRemoteSet:async()=>writes++,acknowledge:async()=>{}});
  assert.equal(result.status,'conflict');assert.equal(writes,0);
 });
+
+test('records confirmed remote revision before acknowledging queued edit',async()=>{
+ const remote=make(),events=[];
+ const result=await replayV2RebasedGroup({operations,readRemoteExercise:async()=>structuredClone(remote),
+  updateRemoteSet:async op=>{remote.revision++;remote.sets[op.setIndex]={done:true,completedAt:'2026-10-16T12:00:00.000Z'};},
+  recordReceipt:async receipt=>{assert.equal(receipt.revisionAfter,receipt.revisionBefore+1);events.push('receipt:'+receipt.id);},
+  acknowledge:async id=>events.push('ack:'+id)});
+ assert.equal(result.status,'synced');
+ assert.deepEqual(events,['receipt:op0','ack:op0','receipt:op1','ack:op1']);
+});
