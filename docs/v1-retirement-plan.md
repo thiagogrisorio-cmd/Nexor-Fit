@@ -41,3 +41,6 @@ CI #480: unitários aprovados; Firestore 32 aprovações, 2 falhas V1 conhecidas
 
 ## Executor de resumo V2 (somente backend)
 Criado `session-v2-summary-executor.js`, recebendo exclusivamente um cliente Firestore Admin de processo confiável. Executa transação que lê pai, resumo existente e 12 filhos; planeja resumo determinístico, cria apenas quando ausente e retorna `unchanged` quando já idêntico. Divergências ou sessões não concluídas são rejeitadas. Três testes com store simulado incluídos no CI. **Não há gatilho Cloud Run/Functions nem credenciais de serviço provisionadas; não é processamento automático em produção.** Antes de conectar gatilho, adicionar testes reais no emulador Admin, autenticação de invocação, proteção contra corrida e observabilidade. CI novo pendente. Não publicar.
+
+## Adaptador de gatilho Firestore V2
+Criados `session-v2-summary-event.js` (filtra somente transições para sessão V2 concluída, valida uid e sessionId, ignora eventos repetidos) e `session-v2-summary-trigger.js` (adapta evento Firestore e cliente Admin ao executor transacional; registra ação). Testes unitários do filtro adicionados ao CI. **Não foi registrado nem implantado um gatilho Firebase Functions/Cloud Run**: falta provisionar runtime de servidor e credenciais Admin, além de teste integrado de emulador. Não expor executor no cliente. CI novo pendente. Sem deploy.
