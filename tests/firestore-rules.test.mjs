@@ -1,3 +1,4 @@
+import {encodeSessionForFirestore,decodeSessionFromFirestore} from '../firestore-session-codec.js';
 import test, {before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -16,7 +17,7 @@ after(async()=>{if(env)await env.cleanup();});
 const db=uid=>env.authenticatedContext(uid).firestore();
 const guest=()=>env.unauthenticatedContext().firestore();
 const sets=()=>Array.from({length:12},()=>Array.from({length:2},()=>({done:false,completedAt:null})));
-const session=id=>({id,day:0,status:'active',startedAt:'2026-10-15T12:00:00.000Z',endedAt:null,restSeconds:90,restUntil:null,sets:sets(),updatedAt:serverTimestamp()});
+const session=id=>encodeSessionForFirestore({id,day:0,status:'active',startedAt:'2026-10-15T12:00:00.000Z',endedAt:null,restSeconds:90,restUntil:null,sets:sets(),updatedAt:serverTimestamp()});
 
 test('owner can create and read session; another account cannot read or write',async()=>{
  const path='users/alice/sessions/allowed-1';
@@ -28,7 +29,7 @@ test('owner can create and read session; another account cannot read or write',a
 test('reject malformed session payload and ID mismatch',async()=>{
  await assertFails(setDoc(doc(db('alice'),'users/alice/sessions/mismatch'),session('different')));
  const invalid=session('bad-sets');
- invalid.sets=[[{done:true,completedAt:null}]];
+ invalid.sets=[{items:[{done:true,completedAt:null}]}];
  await assertFails(setDoc(doc(db('alice'),'users/alice/sessions/bad-sets'),invalid));
 });
 test('owner can complete session but cannot reopen it',async()=>{
