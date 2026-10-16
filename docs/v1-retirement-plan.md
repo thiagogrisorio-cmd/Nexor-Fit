@@ -71,3 +71,6 @@ CI #567: unit-tests, functions-package, functions-emulator e functions-trigger-e
 
 ## Teste negativo do gatilho V2
 CI #573 consultado com jobs ainda em andamento, functions-package aprovado. Teste E2E reforçado para fazer atualização de metadados enquanto sessão V2 continua ativa e verificar que nenhum resumo prematuro é criado, antes da atualização para `completed` que deve disparar resumo. Essa asserção imediata complementa, mas não substitui, verificação eventual assíncrona de ausência de efeitos; CI do novo commit pendente. V1 permanece bloqueadora; sem deploy.
+
+## Estabilização do teste negativo assíncrono
+CI #577 estava em execução (functions-package aprovado) na consulta. O teste E2E aguarda 1,5 s após atualização de sessão ainda ativa antes de confirmar ausência de resumo, permitindo processamento assíncrono do gatilho. Isso reduz falso positivo por leitura imediata, mas não prova ausência absoluta de efeitos tardios. CI novo pendente; produção não alterada.
