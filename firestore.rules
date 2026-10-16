@@ -96,6 +96,11 @@ service cloud.firestore {
               && request.resource.data.startedAt == resource.data.startedAt
               && request.resource.data.day == resource.data.day));
     }
+    // Summaries are generated only by a privileged backend; clients may read but never write.
+    match /users/{uid}/sessionSummaries/{sessionId} {
+      allow read: if isOwner(uid);
+      allow create, update, delete: if false;
+    }
     match /users/{uid}/sessions/{sessionId}/exercises/{exerciseId} {
       allow read: if isOwner(uid);
       allow create: if isOwner(uid)
