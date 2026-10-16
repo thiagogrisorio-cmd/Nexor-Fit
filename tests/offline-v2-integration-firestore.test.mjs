@@ -34,3 +34,20 @@ test('V2 offline queue rejects replay for another authenticated user',async()=>{
  const other=env.authenticatedContext('offline-v2-intruder').firestore();
  await assert.rejects(getDoc(doc(other,'users',owner,'sessions',sessionId,'exercises','0')));
 });
+
+test('V2 offline queue replays two different sets in one exercise and clears IndexedDB',async()=>{
+ const uid='offline-v2-rebase',sessionId='offline-v2-rebase-session';
+ const db=env.authenticatedContext(uid).firestore();
+ await createV2Workout({db,uid,session:startSession({id:sessionId,day:0,now:0}),runTransaction,doc,serverTimestamp});
+ await queueV2SetEdit({uid,id:'set-a',sessionId,exerciseIndex:1,setIndex:0,done:true,baseRevision:0,baseCompletedAt:null,at:1000});
+ await queueV2SetEdit({uid,id:'set-b',sessionId,exerciseIndex:1,setIndex:1,done:true,baseRevision:0,baseCompletedAt:null,at:1001});
+ const readRemoteExercise=async op=>(await getDoc(doc(db,'users',uid,'sessions',op.sessionId,'exercises',String(op.exerciseIndex)))).data();
+ const updateRemoteSet=async op=>updateV2Set({db,uid,sessionId:op.sessionId,exerciseIndex:op.exerciseIndex,setIndex:op.setIndex,done:op.done,expectedRevision:op.expectedRevision,expectedCompletedAt:op.expectedCompletedAt,now:op.at,runTransaction,doc,serverTimestamp});
+ const result=await syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet});
+ assert.equal(result[0].status,'synced');
+ assert.equal(result[0].processed,2);
+ assert.equal((await listPendingV2Edits(uid)).length,0);
+ const saved=await readRemoteExercise({sessionId,exerciseIndex:1});
+ assert.equal(saved.revision,2);
+ assert.deepEqual(saved.sets.map(s=>s.done),[true,true]);
+});
