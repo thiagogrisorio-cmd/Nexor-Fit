@@ -71,3 +71,10 @@ test('live legacy snapshots cannot bypass the guarded V1 to V2 migration',()=>{
  assert.match(ui,/Treino legado detectado\. Migração V2 necessária antes de editar/);
  assert.match(ui,/if\(navigator\.onLine\)load\(\)\.catch/);
 });
+
+test('failed V1 migration preserves the legacy workout read path',()=>{
+ assert.match(ui,/try\{\s*const migration=await migrateLegacySessionAtomically/);
+ assert.match(ui,/catch\(error\)\{\s*console\.warn\('Nexor V1 migration:'/);
+ assert.match(ui,/Treino legado preservado\. Não foi possível migrar/);
+ assert.match(ui,/loadedSession=result\.status==='ready'\?result\.session:null/);
+});
