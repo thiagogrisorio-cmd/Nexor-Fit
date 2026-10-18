@@ -1,5 +1,6 @@
 import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
 import {loadWorkoutForUI} from './session-ui-loader.js';
+import {canUseV2WorkoutPilot} from './workout-v2-rollout-policy.js';
 import {createV2Workout,updateV2Set} from './session-v2-repository.js';
 import {finishV2Workout} from './session-v2-finish.js';
 import {loadV2Summary} from './session-v2-summary-reader.js';
@@ -15,7 +16,7 @@ let observedSessionId='';
 let v2Notice='';
 let v2ReadOnly=false;
 let v2LoadToken=0;
-const v2PilotEnabled=()=>new URLSearchParams(location.search).get('nexorV2StartPilot')==='1';
+const v2PilotEnabled=()=>canUseV2WorkoutPilot({search:location.search,uid,currentUid:auth.currentUser?.uid,online:navigator.onLine});
 async function editV2PilotSet(exerciseIndex,setIndex){
  if(!v2PilotEnabled()||!v2ReadOnly||!uid||auth.currentUser?.uid!==uid||!navigator.onLine||!session?.id)throw Error('Edição V2 indisponível');
  const account=uid,id=session.id;
@@ -233,7 +234,7 @@ export function initSessionUI(getDay){
   if(!Number.isFinite(minutes)||minutes<0||minutes>10){alert('Escolha entre 0 e 10 minutos.');return;}
   try{
    const next=startSession({day:getDay(),restSeconds:Math.round(minutes*60)});
-   const pilot=new URLSearchParams(location.search).get('nexorV2StartPilot')==='1';
+   const pilot=v2PilotEnabled();
    if(pilot&&uid&&auth.currentUser?.uid===uid){
     saving=true;render();
     try{
