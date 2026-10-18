@@ -10,8 +10,8 @@ export async function auditFirestoreSessionOrphans({db,auth,pageSize=100,maxPage
   if(!snapshot||!Array.isArray(snapshot.docs))throw Error('Página Firestore inválida');
   for(const doc of snapshot.docs){
    sessionDocuments++;
-   const segments=doc.ref.path.split('/');
-   if(segments.length!==4||segments[0]!=='users'||(!segments[1]||segments[1].includes('/'))||segments[2]!=='sessions'||!segments[3]){invalidPaths++;continue;}
+   const segments=typeof doc?.ref?.path==='string'?doc.ref.path.split('/'):[];
+   if(segments.length!==4||segments[0]!=='users'||!segments[1]||segments[2]!=='sessions'||!segments[3]){invalidPaths++;continue;}
    const uid=segments[1];
    if(seen.has(uid))continue;
    seen.add(uid);ownersScanned++;
