@@ -34,3 +34,13 @@ test('audit bundle authorizes before generating and rejects identity fields',asy
   if(b===undefined)delete process.env.FIRESTORE_EMULATOR_HOST;else process.env.FIRESTORE_EMULATOR_HOST=b;
  }
 });
+
+// Deployment boundary: the only Functions entrypoint must not expose audit handlers.
+test('Functions entrypoint does not register or export administrative audit endpoints',async()=>{
+ const {readFile}=await import('node:fs/promises');
+ const {fileURLToPath}=await import('node:url');
+ const entrypoint=fileURLToPath(new URL('../functions/index.js',import.meta.url));
+ const source=await readFile(entrypoint,'utf8');
+ assert.doesNotMatch(source,/audit[-\w]*|onRequest\s*\(|onCall\s*\(/i);
+ assert.match(source,/export\s+const\s+onV2WorkoutCompleted\s*=/);
+});
