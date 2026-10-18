@@ -79,7 +79,7 @@ test('backup must match the exact legacy document during atomic conversion',asyn
  const uid='tamper-backup-owner',id='tamper-backup-session',db=env.authenticatedContext(uid).firestore();
  const original=startSession({id,day:0,now:0});
  const ref=doc(db,'users',uid,'sessions',id);
- await assertSucceeds(setDoc(ref,{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
+ await env.withSecurityRulesDisabled(async context=>setDoc(doc(context.firestore(),'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
  const saved=(await assertSucceeds(getDoc(ref))).data();
  const backupRef=doc(db,'users',uid,'sessionBackups',id);
  await assertFails(runTransaction(db,async tx=>{
