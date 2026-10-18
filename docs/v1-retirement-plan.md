@@ -164,3 +164,6 @@ CI #802 confirmou aprovação de unit-tests, functions-package, functions-emulat
 
 ## Bloqueios obrigatórios no contrato de auditoria — 18/10/2026
 CI #806: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; Firestore Rules V1 continua reprovado. Endurecido `functions/audit-aggregate-check.js`: contagens positivas de sessões V1 ativas, esquema desconhecido ou proprietários órfãos exigem bloqueios correspondentes; relatório `complete:false` exige ao menos um bloqueio de paginação incompleta. Testes de regressão adicionados, inclusive aceitação de relatório consistente com bloqueio V1. Commits `45d5265` e `e688adc`. O validador não prova que as contagens de origem são verdadeiras nem autoriza revisão/deploy. Novo CI pendente; nenhum endpoint administrativo publicado.
+
+## Correção de asserção no CI #812 — 18/10/2026
+CI #812: functions-emulator, functions-trigger-emulator e functions-package aprovados; unit-tests teve 162/163 aprovações porque um teste antigo esperava `/Invalid/`, enquanto o validador endurecido corretamente retorna `Missing incomplete blocker`. Atualizada somente a expectativa desse teste, preservando a rejeição de relatório incompleto. Commit `3aa6974`. Firestore Rules continua bloqueado por lacunas V1. Novo CI pendente; sem deploy ou merge.
