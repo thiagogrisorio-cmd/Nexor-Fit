@@ -134,3 +134,6 @@ Adicionado teste que exercita inventário paginado de uma sessão V1 ativa e aud
 
 ## Correção CI #744
 A execução #744 revelou erro de sintaxe no mock de consulta em `tests/v1-retirement-audit-assembly-blockers.test.mjs` (156/157 testes unitários aprovados). Corrigido simplificando o mock de paginação no commit `2e68be3`. Nova execução #746 iniciada, resultado ainda pendente. Firestore Rules V1 permanece bloqueante; não houve deploy.
+
+## Endpoint local protegido para testes
+CI #748: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; Firestore Rules V1 reprovado. Criado `v1-retirement-audit-local-endpoint.js` para compor autenticação/allowlist do endpoint protegido, inventário real por Auth, auditoria Firestore de órfãos e contrato estrito agregado. Teste simulado garante que o usuário não autorizado não dispara scans e autorizado obtém apenas contagens agregadas. **Este módulo fica na raiz e NÃO é exportado nem empacotado como Cloud Function**; faltam teste end-to-end Auth+Firestore Emulator, limites de custo, logs seguros e integração de deploy. Sem deploy.
