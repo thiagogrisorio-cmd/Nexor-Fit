@@ -62,8 +62,21 @@ test('migration does not report success for incomplete V2 children',async()=>{
 test('migration recognizes a complete native V2 without backup',async()=>{
  const original={...encodeSessionForFirestore(startSession({id:'native-v2',day:0,now:0})),schemaVersion:2};
  const writes=[];
- const tx={get:async path=>snapshot(path==='users/u/sessions/native-v2'?original:path.startsWith('users/u/sessions/native-v2/exercises/')?{index:Number(path.split('/').at(-1))}:undefined),set:(...args)=>writes.push(args)};
+ const tx={get:async path=>snapshot(path==='users/u/sessions/native-v2'?original:path.startsWith('users/u/sessions/native-v2/exercises/')?{index:Number(path.split('/').at(-1)),sessionId:'native-v2',revision:0,sets:[{done:false,completedAt:null},{done:false,completedAt:null}]}:undefined),set:(...args)=>writes.push(args)};
  const result=await migrateLegacySessionAtomically({db:{},uid:'u',sessionId:'native-v2',doc,runTransaction:async(_db,fn)=>fn(tx),serverTimestamp:()=> 'now'});
  assert.equal(result.status,'already-v2');
+ assert.equal(writes.length,0);
+});
+
+test('migration rejects malformed existing V2 child even when all 12 exist',async()=>{
+ const original={...encodeSessionForFirestore(startSession({id:'malformed-v2',day:0,now:0})),schemaVersion:2};
+ const writes=[];
+ const tx={get:async path=>snapshot(path==='users/u/sessions/malformed-v2'?original:path.startsWith('users/u/sessions/malformed-v2/exercises/')?{
+  index:Number(path.split('/').at(-1)),sessionId:'malformed-v2',revision:0,
+  sets:[{done:false,completedAt:null},{done:false,completedAt:null}],
+  ...(path.endsWith('/7')?{revision:-1}:{})
+ }:undefined),set:(...args)=>writes.push(args)};
+ const result=await migrateLegacySessionAtomically({db:{},uid:'u',sessionId:'malformed-v2',doc,runTransaction:async(_db,fn)=>fn(tx),serverTimestamp:()=> 'now'});
+ assert.equal(result.reason,'incomplete-v2-migration');
  assert.equal(writes.length,0);
 });
