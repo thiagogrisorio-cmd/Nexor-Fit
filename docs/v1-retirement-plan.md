@@ -98,3 +98,6 @@ CI #637: quatro jobs aprovados; Firestore Rules segue falhando pelos dois testes
 
 ## Teste integrado de órfãos no Firestore Emulator
 Adicionado teste `tests/v1-retirement-orphan-firestore-emulator.test.mjs` com sessões fictícias em dois usuários e mock de `auth.getUser` (um ausente), executando consulta real ao Firestore Emulator com paginação de 2 documentos. Integrado ao job `functions-emulator`. O teste não consulta Firebase Auth real; testa a lógica de verificação de proprietários com mock. CI #647 ainda na fila na última consulta, CI novo pendente. Não houve consulta à produção ou deploy.
+
+## Relatório consolidado de auditoria
+Criado `v1-retirement-audit-report.js`: recebe resultados de inventário e auditoria de proprietários órfãos, valida contagens, retorna indicadores agregados e bloqueios (paginação incompleta, V1 ativa, esquema desconhecido, proprietário órfão, caminhos inválidos). `readyForReview` é apenas elegibilidade para revisão manual, **não** aprovação de migração ou deploy; não substitui as sete condições do gate `assessV1Retirement`. Testes incluídos no npm test. CI #653 estava na fila na última consulta; novos commits ainda pendentes. Sem acesso à produção.
