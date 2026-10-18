@@ -128,3 +128,7 @@ test('queued V2 edits preserve local preview but lock additional edits and finis
  assert.match(ui,/const pilotEdit=v2ReadOnly&&v2PendingCount===0&&v2PilotEnabledOffline\(\)/);
  assert.match(ui,/v2PilotEnabled\(\)&&!!uid&&navigator\.onLine&&v2PendingCount===0/);
 });
+
+test('V2 finish rechecks account, session and connectivity after async queue lookup',()=>{
+ assert.match(ui,/if\(\(await listPendingV2Edits\(account\)\)\.some\(item=>item\.sessionId===id\)\)[\s\S]*?if\(uid!==account\|\|auth\.currentUser\?\.uid!==account\|\|session\?\.id!==id\|\|!navigator\.onLine\)return;\s*try\{/);
+});
