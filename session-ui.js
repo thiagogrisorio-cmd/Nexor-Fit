@@ -231,7 +231,7 @@ async function load(){
    const id=control.exists()?control.data().sessionId:'';
    if(id){
     let result=await loadWorkoutForUI({db,uid:accountUid,sessionId:id,doc,getDoc});
-    if(result.format==='v1'&&navigator.onLine&&accountUid===auth.currentUser?.uid){
+    if(result.format==='v1'&&result.status==='ready'&&result.session?.status==='active'&&navigator.onLine&&accountUid===auth.currentUser?.uid){
      const pendingLegacy=await pendingOfflineOperations(accountUid);
      if(!pendingLegacy.some(item=>item.sessionId===id)){
       const migration=await migrateLegacySessionAtomically({db,uid:accountUid,sessionId:id,doc,runTransaction,serverTimestamp});
