@@ -23,7 +23,8 @@ test('IndexedDB removes V2 operation only after successful sync',async()=>{
  const remote=()=>({index:0,sessionId:'session-ack',revision:0,sets:[{done:false,completedAt:null},{done:false,completedAt:null}]});
  await assert.rejects(syncPendingV2Edits({uid,readRemoteExercise:async()=>remote(),updateRemoteSet:async()=>{throw Error('connection lost');}}),/connection lost/);
  assert.equal((await listPendingV2Edits(uid)).length,1);
- const results=await syncPendingV2Edits({uid,readRemoteExercise:async()=>remote(),updateRemoteSet:async()=>{}});
+ let server=remote();
+ const results=await syncPendingV2Edits({uid,readRemoteExercise:async()=>structuredClone(server),updateRemoteSet:async()=>{server={...server,revision:1,sets:[{done:true,completedAt:'2026-10-18T12:00:00.000Z'},server.sets[1]]};}});
  assert.equal(results[0].status,'synced');
  assert.equal((await listPendingV2Edits(uid)).length,0);
 });
