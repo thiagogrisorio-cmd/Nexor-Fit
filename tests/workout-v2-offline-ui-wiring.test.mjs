@@ -85,3 +85,10 @@ test('live snapshot ignores stale account or session after asynchronous queue lo
  assert.match(ui,/pendingOfflineOperations\(accountUid\)\.then\(pending=>\{\s*if\(uid!==accountUid\|\|auth\.currentUser\?\.uid!==accountUid\|\|observedSessionId!==id\|\|saving\)return;/);
  assert.match(ui,/if\(pending\.some\(item=>item\.sessionId===id\)\)return;\s*applyRemoteSession\(snapshot,accountUid\)/);
 });
+
+const cloudSync=readFileSync(new URL('../sync.js',import.meta.url),'utf8');
+test('offline mode keeps V2 workout controls reachable but prevents legacy cloud writes',()=>{
+ assert.match(cloudSync,/el\('workoutApp'\)\.inert = !!user && \(!ready \|\| busy \|\| failed\)/);
+ assert.match(cloudSync,/if\(busy \|\| !ready \|\| failed \|\| !navigator\.onLine\)/);
+ assert.doesNotMatch(cloudSync,/\.inert = [^;]*!navigator\.onLine/);
+});
