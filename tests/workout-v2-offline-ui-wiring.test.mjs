@@ -35,3 +35,10 @@ test('V2 sessions cannot be replaced by V1 offline cache during hydration',()=>{
  assert.match(ui,/if\(accountUid&&!v2ReadOnly\)\{\s*const cachedId/);
  assert.match(ui,/if\(accountUid&&session\?\.status==='active'&&!v2ReadOnly\)await cacheOnlineWorkout/);
 });
+
+test('V2 editing notice reflects pilot and offline readiness',()=>{
+ assert.match(ui,/Treino V2 pronto para edição/);
+ assert.match(ui,/Treino V2 offline: edições exigem revisões previamente carregadas/);
+ assert.match(ui,/Edição requer piloto autorizado/);
+ assert.doesNotMatch(ui,/Edição ainda indisponível/);
+});
