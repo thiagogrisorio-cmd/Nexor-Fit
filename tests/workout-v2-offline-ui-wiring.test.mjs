@@ -65,3 +65,9 @@ test('active V1 sessions migrate atomically before V2 editing is enabled',()=>{
  assert.match(ui,/migrateLegacySessionAtomically\(\{db,uid:accountUid,sessionId:id,doc,runTransaction,serverTimestamp\}\)/);
  assert.match(ui,/migration\.status==='migrated'\|\|migration\.status==='already-v2'/);
 });
+
+test('live legacy snapshots cannot bypass the guarded V1 to V2 migration',()=>{
+ assert.match(ui,/if\(snapshot\.exists\(\)&&snapshot\.data\(\)\.schemaVersion!==2\)\{/);
+ assert.match(ui,/Treino legado detectado\. Migração V2 necessária antes de editar/);
+ assert.match(ui,/if\(navigator\.onLine\)load\(\)\.catch/);
+});
