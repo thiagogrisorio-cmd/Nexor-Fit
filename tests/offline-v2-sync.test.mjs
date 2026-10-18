@@ -30,3 +30,26 @@ test('V2 preserves pending operation if remote confirmation differs',async()=>{
  assert.equal(result.reason,'confirmation-mismatch');
  assert.equal(acknowledged,false);
 });
+
+test('V2 never acknowledges a completed set without server completion timestamp',async()=>{
+ let acknowledged=false,reads=0;
+ const result=await syncV2OfflineOperation({operation,
+  readRemoteExercise:async()=>{reads++;return reads===1?remote(0):{...remote(1),sets:[{done:true,completedAt:null},{done:false,completedAt:null}]};},
+  updateRemoteSet:async()=>{},acknowledge:async()=>{acknowledged=true;}
+ });
+ assert.equal(result.status,'conflict');
+ assert.equal(result.reason,'confirmation-mismatch');
+ assert.equal(acknowledged,false);
+});
+test('V2 never acknowledges an unchecked set retaining a completion timestamp',async()=>{
+ const unchecked={...operation,done:false,baseRevision:1,baseCompletedAt:'2026-10-18T12:00:00.000Z'};
+ let acknowledged=false,reads=0;
+ const result=await syncV2OfflineOperation({operation:unchecked,
+  readRemoteExercise:async()=>{reads++;return reads===1?
+   {index:0,sessionId:'s',revision:1,sets:[{done:true,completedAt:unchecked.baseCompletedAt},{done:false,completedAt:null}]}:
+   {index:0,sessionId:'s',revision:2,sets:[{done:false,completedAt:unchecked.baseCompletedAt},{done:false,completedAt:null}]};},
+  updateRemoteSet:async()=>{},acknowledge:async()=>{acknowledged=true;}
+ });
+ assert.equal(result.status,'conflict');
+ assert.equal(acknowledged,false);
+});
