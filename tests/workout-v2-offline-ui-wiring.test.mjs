@@ -7,9 +7,10 @@ test('V2 offline pilot prepares revision baselines after session hydration',()=>
  assert.match(ui,/if\(session&&v2PilotEnabled\(\)\)primeV2OfflineBaselines\(accountUid,snapshot\.id\)/);
  assert.match(ui,/queueV2SetEdit\(\{uid:account[\s\S]*?baseRevision:baseline\.revision,baseCompletedAt:set\.completedAt/);
 });
-test('V2 offline pilot preserves queued preview during refresh',()=>{
- assert.match(ui,/if\(!navigator\.onLine&&v2ReadOnly&&session\?\.status==='active'/);
- assert.match(ui,/pending\.some\(item=>item\.sessionId===session\.id\)\)\{v2PendingCount=pending\.length;render\(\);return;/);
+test('V2 offline pilot preserves queued preview during reconnect',()=>{
+ assert.match(ui,/if\\(v2ReadOnly&&session\\?\\.status==='active'/);
+ assert.match(ui,/pending\\.some\\(item=>item\\.sessionId===session\\.id\\)/);
+ assert.match(ui,/Alterações V2 aguardando sincronização/);
 });
 test('V2 async snapshot validates identity again after reading pending queue',()=>{
  assert.match(ui,/const pendingV2=await listPendingV2Edits\\(accountUid\\);\\s*if\\(token!==v2LoadToken/);
