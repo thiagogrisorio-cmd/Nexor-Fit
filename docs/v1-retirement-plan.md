@@ -155,3 +155,6 @@ CI #788: funções, testes unitários e emuladores aprovados; Firestore Rules V1
 
 ## Cobertura negativa de autenticação da auditoria — 18/10/2026
 Após confirmar no CI #788 que `functions-emulator` passou e que `firestore-rules` permaneceu em 32/34 por falhas V1, ampliado o teste com Auth Emulator real para token ausente, token inválido, e-mail não verificado e usuário fora da allowlist. Cada rejeição verifica que `listUsers` não é executado. Commit `7c3aa1f`. Os resultados do novo CI ainda precisam ser conferidos; a auditoria continua restrita aos emuladores, sem endpoint HTTP exportado, deploy ou liberação de produção.
+
+## Guarda de não exposição do endpoint administrativo — 18/10/2026
+CI #798: unit-tests, functions-package, functions-emulator (incluindo os cenários negativos de Auth) e functions-trigger-emulator aprovados; firestore-rules reprovado por lacunas V1 conhecidas. Adicionado teste estático em `tests/v1-retirement-audit-bundle.test.mjs` para impedir referências de auditoria e registros `onRequest`/`onCall` no `functions/index.js`, mantendo exportação do gatilho V2. Commit `e54c4df`; novo CI pendente. Essa guarda não é prova de ausência de todas as formas possíveis de exposição. Nenhum endpoint de auditoria foi exportado e não houve deploy ou merge.
