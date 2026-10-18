@@ -249,6 +249,9 @@ async function load(){
    }
   }
   if(generation!==loadGeneration||accountUid!==uid||saving)return;
+  if(accountUid&&session?.status==='active'&&v2ReadOnly&&v2PilotEnabled()){
+   await primeV2OfflineBaselines(accountUid,session.id).catch(error=>console.warn('Nexor V2 offline baseline:',error));
+  }
   if(accountUid&&session?.status==='active')await cacheOnlineWorkout(accountUid,session).then(()=>localStorage.setItem(activeCacheKey(accountUid),session.id)).catch(console.warn);
   ready=true;
  }catch(error){if(generation!==loadGeneration)return;ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
