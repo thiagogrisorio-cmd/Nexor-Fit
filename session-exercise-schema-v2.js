@@ -24,6 +24,7 @@ export function joinSessionExercises(metadata,documents){
  for(const doc of documents){
   checkIndex(doc.index);
   if(doc.sessionId!==metadata.id||sets[doc.index])throw Error('Exercício duplicado ou sessão incorreta');
+  if(!Number.isInteger(doc.revision)||doc.revision<0)throw Error('Revisão V2 inválida');
   if(!Array.isArray(doc.sets)||doc.sets.length!==2||
      doc.sets.some(s=>typeof s?.done!=='boolean'||(s.completedAt!==null&&typeof s.completedAt!=='string')))
    throw Error('Séries inválidas');
