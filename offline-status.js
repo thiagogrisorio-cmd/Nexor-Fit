@@ -11,7 +11,9 @@ export function initOfflineStatus(){
   if(!navigator.onLine||!auth.currentUser)return;
   try{
    const result=await synchronizeOfflineWorkouts();
-   lastConflict=result.conflicts?.length?result.conflicts.length+' sessão(ões) precisam de revisão':'';
+   lastConflict=result.conflicts?.some(item=>item.reason==='legacy-v1-writes-retired')
+    ?'Sincronização V1 encerrada. Alterações antigas preservadas no dispositivo; recuperação manual necessária.'
+    :result.conflicts?.length?result.conflicts.length+' sessão(ões) precisam de revisão':'';
    await refresh();
   }catch(error){console.warn('Nexor sync:',error);}
  }
