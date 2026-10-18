@@ -80,3 +80,8 @@ test('failed V1 migration preserves the legacy workout read path',()=>{
  assert.match(ui,/Treino legado preservado\. Não foi possível migrar/);
  assert.match(ui,/loadedSession=result\.status==='ready'\?result\.session:null/);
 });
+
+test('live snapshot ignores stale account or session after asynchronous queue lookup',()=>{
+ assert.match(ui,/pendingOfflineOperations\(accountUid\)\.then\(pending=>\{\s*if\(uid!==accountUid\|\|auth\.currentUser\?\.uid!==accountUid\|\|observedSessionId!==id\|\|saving\)return;/);
+ assert.match(ui,/if\(pending\.some\(item=>item\.sessionId===id\)\)return;\s*applyRemoteSession\(snapshot,accountUid\)/);
+});
