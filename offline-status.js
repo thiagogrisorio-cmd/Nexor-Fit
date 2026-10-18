@@ -17,7 +17,7 @@ export function initOfflineStatus(){
   if(!account)return;
   exportButton.disabled=true;
   try{
-   const data=await buildLegacyV1RecoveryExport({uid:account,currentUid:auth.currentUser?.uid});
+   const data=await buildLegacyV1RecoveryExport({uid:account,getCurrentUid:()=>auth.currentUser?.uid});
    if(auth.currentUser?.uid!==account)throw Error('Conta alterada');
    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
    const url=URL.createObjectURL(blob);
