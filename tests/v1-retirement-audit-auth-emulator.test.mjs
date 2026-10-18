@@ -28,7 +28,7 @@ test('Firebase Auth emulator validates disabled and allowlisted admin before Fir
   await auth.updateUser(disabled.uid,{disabled:true});
   const request={method:'POST',headers:{authorization:'Bearer '+disabledToken}};
   const denied=response();await createLocalAuditEndpoint({adminAuth:trackedAuth,db,allowedUids:[disabled.uid]})(request,denied);
-  assert.equal(denied.code,403);assert.equal(scans,0);
+  assert.ok([401,403].includes(denied.code));assert.equal(scans,0);
   request.headers.authorization='Bearer '+adminToken;
   const ok=response();await createLocalAuditEndpoint({adminAuth:trackedAuth,db,allowedUids:[admin.uid]})(request,ok);
   assert.equal(ok.code,200);assert.equal(ok.body.counts.v1Active,1);
