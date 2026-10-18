@@ -44,3 +44,21 @@ test('Functions entrypoint does not register or export administrative audit endp
  assert.doesNotMatch(source,/audit[-\w]*|onRequest\s*\(|onCall\s*\(/i);
  assert.match(source,/export\s+const\s+onV2WorkoutCompleted\s*=/);
 });
+
+test('audit bundle refuses initialization when either emulator is missing',()=>{
+ const authHost=process.env.FIREBASE_AUTH_EMULATOR_HOST;
+ const storeHost=process.env.FIRESTORE_EMULATOR_HOST;
+ try{
+  for(const missing of ['FIREBASE_AUTH_EMULATOR_HOST','FIRESTORE_EMULATOR_HOST']){
+   process.env.FIREBASE_AUTH_EMULATOR_HOST='127.0.0.1:9099';
+   process.env.FIRESTORE_EMULATOR_HOST='127.0.0.1:8080';
+   delete process.env[missing];
+   let generated=0;
+   assert.throws(()=>createAuditEmulatorBundle({generateReport:async()=>{generated++;}}),/Emulators required/);
+   assert.equal(generated,0);
+  }
+ }finally{
+  if(authHost===undefined)delete process.env.FIREBASE_AUTH_EMULATOR_HOST;else process.env.FIREBASE_AUTH_EMULATOR_HOST=authHost;
+  if(storeHost===undefined)delete process.env.FIRESTORE_EMULATOR_HOST;else process.env.FIRESTORE_EMULATOR_HOST=storeHost;
+ }
+});
