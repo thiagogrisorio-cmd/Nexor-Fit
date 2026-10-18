@@ -24,11 +24,13 @@ export async function replayV2RebasedGroup({operations,readRemoteExercise,update
     return {status:'conflict',reason:'concurrent-update',processed};
    throw error;
   }
+  const confirmed=await readRemoteExercise(step.operation);
+  const set=confirmed?.sets?.[step.operation.setIndex];
+  if(confirmed?.revision!==step.expectedRevision+1||set?.done!==step.operation.done||
+     (step.operation.done&&typeof set?.completedAt!=='string')||
+     (!step.operation.done&&set?.completedAt!==null))
+   return {status:'conflict',reason:'confirmation-mismatch',processed};
   if(recordReceipt){
-   const confirmed=await readRemoteExercise(step.operation);
-   const set=confirmed.sets?.[step.operation.setIndex];
-   if(confirmed.revision!==step.expectedRevision+1||set?.done!==step.operation.done)
-    return {status:'conflict',reason:'confirmation-mismatch',processed};
    await recordReceipt({id:step.operation.id,sessionId:step.operation.sessionId,
     exerciseIndex:step.operation.exerciseIndex,setIndex:step.operation.setIndex,
     done:set.done,completedAt:set.completedAt,revisionBefore:step.expectedRevision,
