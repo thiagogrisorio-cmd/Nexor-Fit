@@ -41,3 +41,10 @@ test('rejects fabricated blockers inconsistent with aggregate counts',()=>{
  }
  assert.equal(assertAggregateReport({...base,complete:false,blockers:['orphan-audit-incomplete'],readyForReview:false}).complete,false);
 });
+
+test('rejects owner totals exceeding document and owner bounds',()=>{
+ const base=valid();
+ assert.throws(()=>assertAggregateReport({...base,orphanAudit:{ownersScanned:2,orphanOwners:0,sessionDocuments:1}}),/Invalid orphan count/);
+ assert.throws(()=>assertAggregateReport({...base,orphanAudit:{ownersScanned:1,orphanOwners:2,sessionDocuments:2}}),/Invalid orphan count/);
+ assert.equal(assertAggregateReport({...base,orphanAudit:{ownersScanned:1,orphanOwners:0,sessionDocuments:2}}).readOnly,true);
+});
