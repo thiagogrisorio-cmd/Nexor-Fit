@@ -122,3 +122,6 @@ CI #686: quatro jobs aprovados, Firestore Rules continua falhando nos testes V1.
 
 ## Provider de auditoria no backend
 Criado `functions/audit-provider.js`, compositor de fontes injetadas, e teste garantindo que nenhum scan ocorre antes da autorização do endpoint protegido. CI #710: quatro jobs aprovados e regras Firestore V1 ainda reprovadas. **Ainda não foram importadas/empacotadas as implementações reais do inventário no diretório functions**, nem criado endpoint acessível ou testes Auth+Firestore end-to-end. Sem deploy.
+
+## Guarda preliminar de formato de relatório
+CI #718: quatro jobs aprovados, Firestore Rules V1 reprovado. Adicionado `functions/audit-aggregate-check.js` e aplicado ao provider; rejeita saída sem `readOnly:true`, `counts` e `blockers` como array. Testes incluídos. **Validação é apenas estrutural mínima**, ainda não valida campos extras/PII, não substitui controle de acesso e não há endpoint exportado nem inventário real empacotado no backend. Não usar em produção.
