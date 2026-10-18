@@ -107,7 +107,7 @@ test('offline V2 controls require a baseline for the active session and exercise
 
 test('V2 set render cache invalidates on connectivity and per-exercise baseline changes',()=>{
  assert.match(ui,/const offlineBaselineIndexes=v2ReadOnly&&uid\?session\.sets\.map\(\(_,i\)=>v2ExerciseBaselines\.has\(v2BaselineKey\(uid,session\.id,i\)\)\):\[\]/);
- assert.match(ui,/const setKey=JSON\.stringify\(\[session\.id,session\.sets,saving,offlineSaving,v2ReadOnly,pilotEdit,legacyBlocked,navigator\.onLine,offlineBaselineIndexes\]\)/);
+ assert.match(ui,/const setKey=JSON\.stringify\(\[session\.id,session\.sets,saving,offlineSaving,v2ReadOnly,pilotEdit,legacyBlocked,v2PendingCount,navigator\.onLine,offlineBaselineIndexes\]\)/);
 });
 
 test('successful online V2 edit invalidates the prior offline revision baseline',()=>{
@@ -121,4 +121,10 @@ test('V2 baseline refresh discards stale rows before accepting new revisions',()
 test('live V2 snapshot hides stale workout controls until complete hydration',()=>{
  assert.match(ui,/if\(snapshot\.exists\(\)&&snapshot\.data\(\)\.schemaVersion===2\)\{\s*v2ReadOnly=true;\s*\/\/ Fail closed until the complete V2 exercise snapshot has been validated\.\s*session=null;/);
  assert.match(ui,/session=result\.status==='ready'&&result\.session\.status==='active'\?result\.session:null/);
+});
+
+test('queued V2 edits preserve local preview but lock additional edits and finish',()=>{
+ assert.match(ui,/session=previousV2Session;\s*render\(\);return;/);
+ assert.match(ui,/const pilotEdit=v2ReadOnly&&v2PendingCount===0&&v2PilotEnabledOffline\(\)/);
+ assert.match(ui,/v2PilotEnabled\(\)&&!!uid&&navigator\.onLine&&v2PendingCount===0/);
 });
