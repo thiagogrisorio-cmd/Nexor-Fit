@@ -131,3 +131,6 @@ CI #718: quatro jobs aprovados, Firestore Rules V1 reprovado. Adicionado `functi
 
 ## Teste de composição com bloqueios
 Adicionado teste que exercita inventário paginado de uma sessão V1 ativa e auditoria de um proprietário órfão com interfaces Firebase simuladas; o relatório deve negar `readyForReview`. O teste é registrado no npm test. **Não é integração com Auth Emulator/Firestore Emulator reais e não cria endpoint administrativo.** CI #738 ainda em andamento na última consulta; novos commits aguardam validação. Sem deploy.
+
+## Correção CI #744
+A execução #744 revelou erro de sintaxe no mock de consulta em `tests/v1-retirement-audit-assembly-blockers.test.mjs` (156/157 testes unitários aprovados). Corrigido simplificando o mock de paginação no commit `2e68be3`. Nova execução #746 iniciada, resultado ainda pendente. Firestore Rules V1 permanece bloqueante; não houve deploy.
