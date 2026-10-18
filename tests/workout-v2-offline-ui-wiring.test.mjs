@@ -92,3 +92,8 @@ test('offline mode keeps V2 workout controls reachable but prevents legacy cloud
  assert.match(cloudSync,/if\(busy \|\| !ready \|\| failed \|\| !navigator\.onLine\)/);
  assert.doesNotMatch(cloudSync,/\.inert = [^;]*!navigator\.onLine/);
 });
+
+test('offline focus reload preserves authenticated hydrated V2 workout',()=>{
+ assert.match(ui,/async function load\(\)\{[\s\S]*?if\(!navigator\.onLine&&v2ReadOnly&&session\?\.status==='active'&&uid&&uid===auth\.currentUser\?\.uid\)\{/);
+ assert.match(ui,/Treino V2 offline\. Edições exigem revisões previamente carregadas/);
+});
