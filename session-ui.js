@@ -231,7 +231,8 @@ async function load(){
    if(id){const result=await loadWorkoutForUI({db,uid:accountUid,sessionId:id,doc,getDoc});if(result.format==='v2'||result.status==='incomplete'){v2ReadOnly=true;v2Notice=result.status==='ready'?'Treino V2 em modo somente leitura.':'Treino V2 incompleto. Edição bloqueada.';}loadedSession=result.status==='ready'?result.session:null;}
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
    loadedHistory=rows.docs.filter(row=>row.data().schemaVersion!==2).map(row=>decodeSessionFromFirestore(row.data())).filter(item=>item.status==='completed');
-   if(v2PilotEnabled()){
+   {
+    // V2 history remains visible without the pilot flag; this is read-only.
     for(const row of rows.docs.filter(item=>item.data().schemaVersion===2&&item.data().status==='completed')){
      const item=row.data();
      loadedHistory.push({id:row.id,day:item.day,status:item.status,startedAt:item.startedAt,endedAt:item.endedAt,durationSeconds:item.durationSeconds,completedSets:Number.isInteger(item.completedSets)?item.completedSets:null,schemaVersion:2,sets:[]});
