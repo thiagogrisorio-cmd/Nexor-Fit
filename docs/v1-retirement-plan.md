@@ -185,3 +185,6 @@ CI #836: unit-tests, functions-package, functions-emulator e functions-trigger-e
 
 ## Limites coerentes para proprietários órfãos — 18/10/2026
 CI #842: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules reprovado. Validador e gerador do relatório agora exigem `orphanOwners <= ownersScanned <= sessionDocuments`, além das verificações existentes. Testes unitários cobrem rejeições nas duas camadas e um cenário válido. Commits `1767611`, `be08362`, `44dc648`, `cb2cad2`. Novo CI ainda não verificado; sem deploy ou merge.
+
+## Caminhos inválidos de sessões bloqueiam aposentadoria V1 — 18/10/2026
+CI #851: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules segue reprovado. Testes adicionais garantem que caminhos de sessão fora de `users/{uid}/sessions/{id}` sejam contados em `invalidPaths`, não provoquem consulta Auth para o caminho inválido e não apareçam no relatório. O relatório agregado mantém `complete:true` quando varredura completa, mas exige `readyForReview:false` e `invalid-session-paths` se houver caminhos inválidos. Commits `1177f1a` e `2cac037`. Novo CI pendente; sem deploy ou merge.
