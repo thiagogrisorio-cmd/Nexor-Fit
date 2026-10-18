@@ -19,4 +19,8 @@ test('protected local endpoint prevents scans before authorization and returns a
  const allowed=response();await createLocalAuditEndpoint({adminAuth:auth,db,allowedUids:['admin']})(request,allowed);
  assert.equal(allowed.code,200);assert.equal(scans,2);assert.equal(allowed.body.readOnly,true);
  assert.deepEqual(allowed.body.counts,{total:0,v1Active:0,v1Completed:0,v2Active:0,v2Completed:0,unknown:0});
+ }finally{
+ if(oldAuth===undefined)delete process.env.FIREBASE_AUTH_EMULATOR_HOST;else process.env.FIREBASE_AUTH_EMULATOR_HOST=oldAuth;
+ if(oldStore===undefined)delete process.env.FIRESTORE_EMULATOR_HOST;else process.env.FIRESTORE_EMULATOR_HOST=oldStore;
+ }
 });
