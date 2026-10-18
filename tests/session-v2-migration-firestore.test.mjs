@@ -13,6 +13,7 @@ test('atomic migration keeps immutable V1 backup and creates 12 V2 children',asy
  const uid='backup-owner',id='backup-session',db=env.authenticatedContext(uid).firestore();
  const original=startSession({id,day:0,now:0});
  await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
+ await assertSucceeds(setDoc(doc(db,'users',uid,'sessionControl','active'),{sessionId:id,updatedAt:serverTimestamp()}));
  const result=await assertSucceeds(migrateLegacySessionAtomically({db,uid,sessionId:id,doc,runTransaction,serverTimestamp}));
  assert.equal(result.status,'migrated');
  const backup=doc(db,'users',uid,'sessionBackups',id);
