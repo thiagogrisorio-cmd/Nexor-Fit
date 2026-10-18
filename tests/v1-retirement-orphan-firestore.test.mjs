@@ -48,3 +48,16 @@ test('empty owner or session path segments are invalid without Auth lookup',asyn
  assert.equal(report.complete,true);
  assert.equal(JSON.stringify(report).includes('empty-owner'),false);
 });
+
+test('missing and non-string document paths are counted as invalid',async()=>{
+ const rows=[{ref:{}},{ref:{path:42}},{ref:{path:'users/member/sessions/valid'}}];
+ let checked=0;
+ const db={collectionGroup:()=>({orderBy(){return this;},limit(){return this;},get:async()=>({docs:rows})})};
+ const auth={getUser:async uid=>{checked++;assert.equal(uid,'member');return {uid};}};
+ const report=await auditFirestoreSessionOrphans({db,auth,pageSize:10});
+ assert.equal(report.invalidPaths,2);
+ assert.equal(report.sessionDocuments,3);
+ assert.equal(report.ownersScanned,1);
+ assert.equal(checked,1);
+ assert.equal(report.complete,true);
+});
