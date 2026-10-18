@@ -386,6 +386,8 @@ export function initSessionUI(getDay){
    if(!v2PilotEnabled()||!uid||auth.currentUser?.uid!==uid||!navigator.onLine)return;
    const account=uid,id=session.id;
    if((await listPendingV2Edits(account)).some(item=>item.sessionId===id)){alert('Sincronize as alterações V2 pendentes antes de concluir o treino.');return;}
+   // The asynchronous queue read may finish after a sign-out or session switch.
+   if(uid!==account||auth.currentUser?.uid!==account||session?.id!==id||!navigator.onLine)return;
    try{
     saving=true;render();
     await finishV2Workout({db,uid:account,sessionId:id,doc,runTransaction,serverTimestamp});
