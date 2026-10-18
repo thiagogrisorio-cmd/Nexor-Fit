@@ -38,3 +38,13 @@ test('atomic migration refuses stale control pointer without backup or V2 writes
  assert.equal((await getDoc(doc(db,'users',uid,'sessions',id))).data().schemaVersion,undefined);
  assert.equal((await getDoc(doc(db,'users',uid,'sessions',id,'exercises','0'))).exists(),false);
 });
+
+test('V1 to V2 parent conversion without immutable backup is rejected',async()=>{
+ const uid='no-backup-owner',id='no-backup-session',db=env.authenticatedContext(uid).firestore();
+ const original=startSession({id,day:0,now:0});
+ await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(db,'users',uid,'sessions',id),{schemaVersion:2,sets:undefined,updatedAt:serverTimestamp()}));
+ const saved=await assertSucceeds(getDoc(doc(db,'users',uid,'sessions',id)));
+ assert.equal(saved.data().schemaVersion,undefined);
+ assert.ok(Array.isArray(saved.data().sets));
+});
