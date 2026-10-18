@@ -107,7 +107,7 @@ function applyRemoteSession(snapshot,accountUid){
   v2Notice='Treino V2 detectado. Carregando exercícios em modo somente leitura.';
   render();
   const token=++v2LoadToken;
-  loadWorkoutForUI({db,uid:accountUid,sessionId:snapshot.id,doc,getDoc}).then(result=>{
+  loadWorkoutForUI({db,uid:accountUid,sessionId:snapshot.id,doc,getDoc}).then(async result=>{
    if(token!==v2LoadToken||uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
    v2Notice=result.status==='ready'?'Treino V2 carregado em modo somente leitura. Edição ainda indisponível.':'Treino V2 incompleto ou indisponível. Nenhuma alteração foi realizada.';
    const pendingV2=await listPendingV2Edits(accountUid);
