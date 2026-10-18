@@ -253,7 +253,7 @@ async function load(){
        console.warn('Nexor V1 migration:',error);
        v2Notice='Treino legado preservado. Não foi possível migrar; reconecte e tente novamente.';
       }
-     }else v2Notice='Treino legado com alterações offline pendentes. Migração bloqueada até sincronizar.';
+     }else v2Notice='Treino legado com alterações offline V1 pendentes. Reenvio V1 desativado por segurança; dados locais preservados para recuperação. Migração automática bloqueada.';
     }
     if(result.format==='v2'||result.status==='incomplete'){
      v2ReadOnly=true;
