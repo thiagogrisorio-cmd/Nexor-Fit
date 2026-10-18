@@ -45,8 +45,8 @@ export function initOfflineStatus(){
    if(current!==generation||scope!==(auth.currentUser?.uid||'guest'))return;
    const network=navigator.onLine?'Conexão disponível':'Sem conexão';
    target.textContent=summary.count
-    ?network+' · '+summary.count+' alteração(ões) offline aguardando sincronização'
-    :network+' · Nenhuma alteração offline pendente';
+    ?network+' · '+summary.count+' alteração(ões) V1 preservada(s), sem sincronização automática. Exporte o arquivo de recuperação antes de limpar os dados deste dispositivo.'
+    :network+' · Nenhuma alteração offline V1 pendente';
    exportButton.hidden=!auth.currentUser||summary.count===0;
    if(lastConflict)target.textContent+=' · '+lastConflict;
   }catch(error){
