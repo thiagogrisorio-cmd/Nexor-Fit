@@ -137,3 +137,6 @@ A execução #744 revelou erro de sintaxe no mock de consulta em `tests/v1-retir
 
 ## Endpoint local protegido para testes
 CI #748: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; Firestore Rules V1 reprovado. Criado `v1-retirement-audit-local-endpoint.js` para compor autenticação/allowlist do endpoint protegido, inventário real por Auth, auditoria Firestore de órfãos e contrato estrito agregado. Teste simulado garante que o usuário não autorizado não dispara scans e autorizado obtém apenas contagens agregadas. **Este módulo fica na raiz e NÃO é exportado nem empacotado como Cloud Function**; faltam teste end-to-end Auth+Firestore Emulator, limites de custo, logs seguros e integração de deploy. Sem deploy.
+
+## Teste protegido com Firestore Emulator
+CI #748: quatro jobs aprovados, Firestore Rules V1 falhou. Adicionado `tests/v1-retirement-audit-local-firestore.test.mjs`, executado no job `functions-emulator`, que usa Firestore Emulator real com sessão V1 fictícia, Auth simulado, bloqueia solicitação não autorizada antes de `listUsers`, e valida retorno agregado para administrador autorizado. **Ainda não utiliza Auth Emulator real nem Cloud Function HTTP empacotada**; nenhuma consulta de produção. Sem deploy.
