@@ -30,3 +30,19 @@ test('incomplete Auth pagination cannot claim audit readiness',async()=>{
  assert.equal(report.readOnly,true);
  assert.equal(JSON.stringify(report).includes('more-'),false);
 });
+
+test('incomplete Firestore orphan pagination blocks readiness and hides document paths',async()=>{
+ const auth={listUsers:async()=>({users:[]}),getUser:async uid=>({uid})};
+ let scans=0;
+ const query={orderBy(){return this;},limit(){return this;},startAfter(){return this;},get:async()=>({docs:[{ref:{path:`users/owner/sessions/private-${++scans}`}}]})};
+ const db={collectionGroup:()=>query,collection:()=>query};
+ const report=await assembleRetirementAudit(auth,db);
+ assert.equal(scans,1000);
+ assert.equal(report.complete,false);
+ assert.equal(report.readyForReview,false);
+ assert.ok(report.blockers.includes('orphan-audit-incomplete'));
+ assert.equal(report.orphanAudit.sessionDocuments,1000);
+ assert.equal(report.orphanAudit.ownersScanned,1);
+ assert.equal(report.readOnly,true);
+ assert.equal(JSON.stringify(report).includes('private-'),false);
+});
