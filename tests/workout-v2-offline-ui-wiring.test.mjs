@@ -42,3 +42,9 @@ test('V2 editing notice reflects pilot and offline readiness',()=>{
  assert.match(ui,/Edição requer piloto autorizado/);
  assert.doesNotMatch(ui,/Edição ainda indisponível/);
 });
+
+test('completed V2 workouts appear in history without the pilot flag',()=>{
+ assert.match(ui,/V2 history remains visible without the pilot flag/);
+ assert.match(ui,/for\(const row of rows\.docs\.filter\(item=>item\.data\(\)\.schemaVersion===2&&item\.data\(\)\.status==='completed'\)\)/);
+ assert.match(ui,/const summary=await loadV2Summary/);
+});
