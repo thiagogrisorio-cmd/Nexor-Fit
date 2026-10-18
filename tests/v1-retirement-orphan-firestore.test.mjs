@@ -34,3 +34,17 @@ test('invalid session paths are counted without owner lookup or identifier leaka
  assert.equal(JSON.stringify(report).includes('private'),false);
  assert.equal(JSON.stringify(report).includes('good'),false);
 });
+
+test('empty owner or session path segments are invalid without Auth lookup',async()=>{
+ const paths=['users//sessions/empty-owner','users/member/sessions/','users/member/sessions/valid'];
+ let checked=0;
+ const db={collectionGroup:()=>({orderBy(){return this;},limit(){return this;},get:async()=>({docs:paths.map(path=>({ref:{path}}))})})};
+ const auth={getUser:async uid=>{checked++;assert.equal(uid,'member');return {uid};}};
+ const report=await auditFirestoreSessionOrphans({db,auth,pageSize:10});
+ assert.equal(report.invalidPaths,2);
+ assert.equal(report.sessionDocuments,3);
+ assert.equal(report.ownersScanned,1);
+ assert.equal(checked,1);
+ assert.equal(report.complete,true);
+ assert.equal(JSON.stringify(report).includes('empty-owner'),false);
+});
