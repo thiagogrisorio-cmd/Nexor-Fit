@@ -64,6 +64,8 @@ async function editV2PilotSet(exerciseIndex,setIndex){
  const ref=doc(db,'users',account,'sessions',id,'exercises',String(exerciseIndex));
  const snapshot=await getDoc(ref);
  if(!snapshot.exists()||snapshot.data().index!==exerciseIndex||snapshot.data().sessionId!==id)throw Error('Exercício V2 inválido');
+ const pending=await listPendingV2Edits(account);
+ if(pending.some(item=>item.sessionId===id&&item.exerciseIndex===exerciseIndex))throw Error('Sincronize as alterações pendentes antes de editar online');
  const row=snapshot.data(),set=row.sets?.[setIndex];
  if(!set||typeof set.done!=='boolean')throw Error('Série V2 inválida');
  if(account!==auth.currentUser?.uid||session?.id!==id)throw Error('Sessão alterada');
@@ -109,6 +111,7 @@ function applyRemoteSession(snapshot,accountUid){
    if(token!==v2LoadToken||uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
    v2Notice=result.status==='ready'?'Treino V2 carregado em modo somente leitura. Edição ainda indisponível.':'Treino V2 incompleto ou indisponível. Nenhuma alteração foi realizada.';
    session=result.status==='ready'&&result.session.status==='active'?result.session:null;
+   if(session&&v2PilotEnabled())primeV2OfflineBaselines(accountUid,snapshot.id).catch(console.warn);
    render();
   }).catch(error=>{if(token!==v2LoadToken||uid!==accountUid)return;console.error('Nexor V2:',error);v2Notice='Não foi possível carregar o treino V2 com segurança.';render();});
   return;
@@ -296,6 +299,7 @@ export function initSessionUI(getDay){
   if(v2ReadOnly){
    if(!v2PilotEnabled()||!uid||auth.currentUser?.uid!==uid||!navigator.onLine)return;
    const account=uid,id=session.id;
+   if((await listPendingV2Edits(account)).some(item=>item.sessionId===id)){alert('Sincronize as alterações V2 pendentes antes de concluir o treino.');return;}
    try{
     saving=true;render();
     await finishV2Workout({db,uid:account,sessionId:id,doc,runTransaction,serverTimestamp});
