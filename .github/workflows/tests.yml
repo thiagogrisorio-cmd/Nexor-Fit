@@ -17,6 +17,7 @@ jobs:
           node-version: '22'
       - run: npm install
       - run: npm test
+      - run: node --test tests/local-emulator-policy.test.mjs
   firestore-rules:
     runs-on: ubuntu-latest
     steps:
