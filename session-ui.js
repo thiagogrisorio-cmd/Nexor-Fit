@@ -1,5 +1,6 @@
 import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
 import {loadWorkoutForUI} from './session-ui-loader.js';
+import {listPendingV2Edits} from './offline-v2-queue.js';
 import {canUseV2WorkoutPilot} from './workout-v2-rollout-policy.js';
 import {createV2Workout,updateV2Set} from './session-v2-repository.js';
 import {finishV2Workout} from './session-v2-finish.js';
@@ -16,6 +17,17 @@ let observedSessionId='';
 let v2Notice='';
 let v2ReadOnly=false;
 let v2LoadToken=0;
+let v2PendingCount=0;
+async function refreshV2PendingCount(){
+ const account=uid;
+ if(!account){v2PendingCount=0;render();return;}
+ try{
+  const edits=await listPendingV2Edits(account);
+  if(uid!==account||auth.currentUser?.uid!==account)return;
+  v2PendingCount=edits.length;
+  render();
+ }catch(error){console.warn('Nexor V2 pending status:',error);}
+}
 const v2PilotEnabled=()=>canUseV2WorkoutPilot({search:location.search,uid,currentUid:auth.currentUser?.uid,online:navigator.onLine});
 async function editV2PilotSet(exerciseIndex,setIndex){
  if(!v2PilotEnabled()||!v2ReadOnly||!uid||auth.currentUser?.uid!==uid||!navigator.onLine||!session?.id)throw Error('Edição V2 indisponível');
@@ -214,7 +226,7 @@ function render(){
  panel.classList.toggle('hidden',!current);
  $('sessionStartPanel').classList.toggle('hidden',!!current);
  if(session?.status==='active'&&!current)$('sessionMessage').textContent='Há um treino em andamento. Abra o Treino '+String.fromCharCode(65+session.day)+' para continuar.';
- else $('sessionMessage').textContent=v2Notice;
+ else $('sessionMessage').textContent=v2Notice+(v2PendingCount?' '+v2PendingCount+' alteração(ões) V2 aguardando sincronização.':'');
  $('sessionStartPanel').querySelector('button').disabled=!ready||saving||v2ReadOnly||session?.status==='active';
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
