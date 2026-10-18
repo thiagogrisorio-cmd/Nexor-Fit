@@ -74,3 +74,23 @@ test('owner cannot forge a migration backup against an unrelated V2 parent',asyn
  const backup=await assertSucceeds(getDoc(doc(db,'users',uid,'sessionBackups',id)));
  assert.equal(backup.exists(),false);
 });
+
+test('backup must match the exact legacy document during atomic conversion',async()=>{
+ const uid='tamper-backup-owner',id='tamper-backup-session',db=env.authenticatedContext(uid).firestore();
+ const original=startSession({id,day:0,now:0});
+ const ref=doc(db,'users',uid,'sessions',id);
+ await assertSucceeds(setDoc(ref,{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
+ const saved=(await assertSucceeds(getDoc(ref))).data();
+ const backupRef=doc(db,'users',uid,'sessionBackups',id);
+ await assertFails(runTransaction(db,async tx=>{
+  const existing=await tx.get(ref);
+  const forged={...existing.data(),restSeconds:120};
+  tx.set(backupRef,{sessionId:id,original:forged,createdAt:serverTimestamp()});
+  tx.set(ref,{
+   id,day:0,status:'active',startedAt:original.startedAt,restSeconds:90,
+   schemaVersion:2,updatedAt:serverTimestamp()
+  });
+ }));
+ assert.equal((await assertSucceeds(getDoc(backupRef))).exists(),false);
+ assert.deepEqual((await assertSucceeds(getDoc(ref))).data(),saved);
+});
