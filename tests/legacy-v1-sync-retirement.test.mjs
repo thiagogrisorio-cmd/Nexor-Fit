@@ -38,3 +38,9 @@ test('retired V1 queue never promises automatic synchronization',()=>{
  assert.match(status,/Exporte o arquivo de recuperação antes de limpar os dados/);
  assert.doesNotMatch(status,/alteração\(ões\) offline aguardando sincronização/);
 });
+
+test('V1 export requires a live account identity provider, never a self-authorized default',()=>{
+ const recovery=readFileSync(new URL('../offline-v1-recovery-export.js',import.meta.url),'utf8');
+ assert.match(recovery,/typeof getCurrentUid!=='function'/);
+ assert.doesNotMatch(recovery,/getCurrentUid=\(\)=>uid/);
+});
