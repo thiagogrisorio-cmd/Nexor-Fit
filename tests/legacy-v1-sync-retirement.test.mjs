@@ -19,3 +19,14 @@ test('legacy queue recovery requirement is visible without deleting local edits'
  assert.match(status,/Alterações antigas preservadas no dispositivo/);
  assert.match(ui,/Reenvio V1 desativado por segurança; dados locais preservados para recuperação/);
 });
+
+test('V1 recovery export is read-only and account-scoped',()=>{
+ const recovery=readFileSync(new URL('../offline-v1-recovery-export.js',import.meta.url),'utf8');
+ const status=readFileSync(new URL('../offline-status.js',import.meta.url),'utf8');
+ assert.match(recovery,/pendingOfflineOperations\(uid\)/);
+ assert.match(recovery,/readOfflineWorkout\(uid,sessionId\)/);
+ assert.match(recovery,/uid!==currentUid/);
+ assert.doesNotMatch(recovery,/removeOfflineOperation|runTransaction|setDoc|updateDoc/);
+ assert.match(status,/buildLegacyV1RecoveryExport/);
+ assert.match(status,/Exportar recuperação V1/);
+});
