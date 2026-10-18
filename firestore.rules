@@ -95,8 +95,9 @@ service cloud.firestore {
           || (resource.data.status == 'active'
               && request.resource.data.startedAt == resource.data.startedAt
               && request.resource.data.day == resource.data.day
-              && (resource.data.keys().hasAny(['schemaVersion'])
-                || !request.resource.data.keys().hasAny(['schemaVersion'])
+              && (!resource.data.keys().hasAny(['schemaVersion'])
+                || request.resource.data.schemaVersion == 2)
+              && (request.resource.data.keys().hasAny(['schemaVersion']) == resource.data.keys().hasAny(['schemaVersion'])
                 || (getAfter(/databases/$(database)/documents/users/$(uid)/sessionBackups/$(sessionId)).data.original == resource.data))));
     }
     // Summaries are generated only by a privileged backend; clients may read but never write.
