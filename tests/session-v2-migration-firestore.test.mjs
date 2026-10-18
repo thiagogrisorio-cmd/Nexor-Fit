@@ -25,3 +25,16 @@ test('atomic migration keeps immutable V1 backup and creates 12 V2 children',asy
  await assertFails(deleteDoc(backup));
  await assertFails(getDoc(doc(env.authenticatedContext('other-user').firestore(),'users',uid,'sessionBackups',id)));
 });
+
+test('atomic migration refuses stale control pointer without backup or V2 writes',async()=>{
+ const uid='stale-owner',id='stale-session',db=env.authenticatedContext(uid).firestore();
+ const original=startSession({id,day:0,now:0});
+ await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
+ await assertSucceeds(setDoc(doc(db,'users',uid,'sessionControl','active'),{sessionId:'another-session',updatedAt:serverTimestamp()}));
+ const result=await migrateLegacySessionAtomically({db,uid,sessionId:id,doc,runTransaction,serverTimestamp});
+ assert.equal(result.status,'conflict');
+ assert.equal(result.reason,'not-active-session');
+ assert.equal((await getDoc(doc(db,'users',uid,'sessionBackups',id))).exists(),false);
+ assert.equal((await getDoc(doc(db,'users',uid,'sessions',id))).data().schemaVersion,undefined);
+ assert.equal((await getDoc(doc(db,'users',uid,'sessions',id,'exercises','0'))).exists(),false);
+});
