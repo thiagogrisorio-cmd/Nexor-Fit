@@ -6,8 +6,8 @@ import {getFirestore,connectFirestoreEmulator} from 'https://www.gstatic.com/fir
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 // Explicit local-only smoke-test mode; never connect production domains to emulators.
-const localHost=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
-export const usingLocalEmulators=localHost&&new URLSearchParams(location.search).get('nexorEmulators')==='1';
+import {shouldUseLocalEmulators} from './local-emulator-policy.js';
+export const usingLocalEmulators=shouldUseLocalEmulators({hostname:location.hostname,search:location.search});
 if(usingLocalEmulators){
  connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});
  connectFirestoreEmulator(getFirestore(app),'127.0.0.1',8080);
