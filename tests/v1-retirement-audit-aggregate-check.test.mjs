@@ -13,3 +13,12 @@ test('rejects inconsistent totals, invalid blockers and false readiness',()=>{
  assert.throws(()=>assertAggregateReport({...valid(),blockers:['unknown']}),/Invalid/);
  assert.throws(()=>assertAggregateReport({...valid(),complete:false}),/Invalid/);
 });
+
+test('rejects reports concealing mandatory risk blockers',()=>{
+ const base=valid();
+ assert.throws(()=>assertAggregateReport({...base,counts:{...base.counts,total:1,v1Active:1},readyForReview:false}),/Missing required blockers/);
+ assert.throws(()=>assertAggregateReport({...base,counts:{...base.counts,total:1,unknown:1},readyForReview:false}),/Missing required blockers/);
+ assert.throws(()=>assertAggregateReport({...base,orphanAudit:{ownersScanned:1,orphanOwners:1,sessionDocuments:1},readyForReview:false}),/Missing required blockers/);
+ assert.throws(()=>assertAggregateReport({...base,complete:false,readyForReview:false}),/Missing incomplete blocker/);
+ assert.equal(assertAggregateReport({...base,counts:{...base.counts,total:1,v1Active:1},blockers:['v1-active-sessions'],readyForReview:false}).readOnly,true);
+});
