@@ -229,6 +229,12 @@ async function save(next, operation=null){
  }catch(error){if(accountAtStart===auth.currentUser?.uid)await load();throw error;}finally{saving=false;render();}
 }
 async function load(){
+ // A focus/visibility reload while offline must not discard the hydrated V2 session.
+ // Keep the authenticated in-memory view; never treat it as a fresh server baseline.
+ if(!navigator.onLine&&v2ReadOnly&&session?.status==='active'&&uid&&uid===auth.currentUser?.uid){
+  v2Notice='Treino V2 offline. Edições exigem revisões previamente carregadas; sincronize ao reconectar.';
+  render();return;
+ }
  // Keep the local V2 preview visible while queued edits await reconnection.
  if(v2ReadOnly&&session?.status==='active'&&uid&&uid===auth.currentUser?.uid){
   const pending=await listPendingV2Edits(uid).catch(()=>[]);
