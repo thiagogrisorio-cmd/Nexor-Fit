@@ -57,9 +57,9 @@ async function refreshV2PendingCount(){
   render();
  }catch(error){console.warn('Nexor V2 pending status:',error);}
 }
-const v2PilotRequested=()=>new URLSearchParams(location.search).get('nexorV2StartPilot')==='1';
-const v2PilotEnabledOffline=()=>new URLSearchParams(location.search).get('nexorV2StartPilot')==='1'&&!!uid&&uid===auth.currentUser?.uid;
-const v2PilotEnabled=()=>canUseV2WorkoutPilot({search:location.search,uid,currentUid:auth.currentUser?.uid,online:navigator.onLine});
+const v2PilotRequested=()=>true; // V2-only write boundary; legacy sessions remain readable.
+const v2PilotEnabledOffline=()=>!!uid&&uid===auth.currentUser?.uid;
+const v2PilotEnabled=()=>canUseV2WorkoutPilot({search:'?nexorV2StartPilot=1',uid,currentUid:auth.currentUser?.uid,online:navigator.onLine});
 async function editV2PilotSet(exerciseIndex,setIndex){
  if(!v2PilotEnabled()||!v2ReadOnly||!uid||auth.currentUser?.uid!==uid||!navigator.onLine||!session?.id)throw Error('Edição V2 indisponível');
  const account=uid,id=session.id;
@@ -301,7 +301,7 @@ export function initSessionUI(getDay){
   if(!Number.isFinite(minutes)||minutes<0||minutes>10){alert('Escolha entre 0 e 10 minutos.');return;}
   try{
    const next=startSession({day:getDay(),restSeconds:Math.round(minutes*60)});
-   const pilotRequested=new URLSearchParams(location.search).get('nexorV2StartPilot')==='1';
+   const pilotRequested=v2PilotRequested();
    const pilot=v2PilotEnabled();
    if(pilotRequested&&!pilot){alert('Piloto V2 indisponível sem conexão ou autenticação válida. Nenhuma sessão V1 será criada.');return;}
    if(pilot&&uid&&auth.currentUser?.uid===uid){
@@ -310,7 +310,7 @@ export function initSessionUI(getDay){
      await createV2Workout({db,uid,session:next,runTransaction,doc,serverTimestamp});
     }finally{saving=false;render();}
     await load();
-   }else await save(next);
+   }else throw Error('Início V1 desativado; faça login e conecte-se para iniciar V2');
   }catch(e){console.error('Nexor start:',e);alert('Não foi possível iniciar o treino. Tente novamente.');}
  };
  $('sessionSetList').onclick=async event=>{
