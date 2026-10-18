@@ -12,7 +12,7 @@ test('Firebase Auth emulator validates disabled and allowlisted admin before Fir
  try{
   const auth=getAuth(app),db=getFirestore(app);
   const admin=await auth.createUser({email:'audit-admin@example.test',emailVerified:true});
-  const disabled=await auth.createUser({email:'audit-disabled@example.test',emailVerified:true,disabled:true});
+  const disabled=await auth.createUser({email:'audit-disabled@example.test',emailVerified:true});
   await db.doc('users/'+admin.uid+'/sessions/s1').set({id:'s1',status:'active',sets:[]});
   let scans=0;
   const trackedAuth={verifyIdToken:(token)=>auth.verifyIdToken(token,true),getUser:uid=>auth.getUser(uid),listUsers:async(...args)=>{scans++;return auth.listUsers(...args);}};
@@ -25,6 +25,7 @@ test('Firebase Auth emulator validates disabled and allowlisted admin before Fir
   };
   const disabledToken=await emulatorSignIn(disabled);
   const adminToken=await emulatorSignIn(admin);
+  await auth.updateUser(disabled.uid,{disabled:true});
   const request={method:'POST',headers:{authorization:'Bearer '+disabledToken}};
   const denied=response();await createLocalAuditEndpoint({adminAuth:trackedAuth,db,allowedUids:[disabled.uid]})(request,denied);
   assert.equal(denied.code,403);assert.equal(scans,0);
