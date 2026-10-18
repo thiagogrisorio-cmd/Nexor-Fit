@@ -11,7 +11,7 @@ export async function auditFirestoreSessionOrphans({db,auth,pageSize=100,maxPage
   for(const doc of snapshot.docs){
    sessionDocuments++;
    const segments=doc.ref.path.split('/');
-   if(segments.length!==4||segments[0]!=='users'||segments[2]!=='sessions'){invalidPaths++;continue;}
+   if(segments.length!==4||segments[0]!=='users'||!segments[1]||segments[2]!=='sessions'||!segments[3]){invalidPaths++;continue;}
    const uid=segments[1];
    if(seen.has(uid))continue;
    seen.add(uid);ownersScanned++;
