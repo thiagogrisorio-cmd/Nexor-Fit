@@ -41,7 +41,7 @@ async function queueOfflineV2PilotSet(exerciseIndex,setIndex){
  if(uid!==account||auth.currentUser?.uid!==account||session?.id!==id||navigator.onLine)throw Error('Conta, sessão ou conectividade alterada durante a edição');
  const desired=!session.sets[exerciseIndex][setIndex].done;
  await queueV2SetEdit({uid:account,id:globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+exerciseIndex+'-'+setIndex,sessionId:id,exerciseIndex,setIndex,done:desired,baseRevision:baseline.revision,baseCompletedAt:set.completedAt});
- if(uid!==account||session?.id!==id)return;
+ if(uid!==account||auth.currentUser?.uid!==account||session?.id!==id)return;
  session={...session,sets:session.sets.map((row,i)=>i===exerciseIndex?row.map((value,j)=>j===setIndex?{...value,done:desired}:value):row)};
  window.dispatchEvent(new Event('nexor-v2-queue-changed'));
  render();
