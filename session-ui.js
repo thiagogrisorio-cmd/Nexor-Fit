@@ -305,9 +305,14 @@ export function initSessionUI(getDay){
   }
   try{if(await offlineEdit('finish'))return;await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
  };
+ window.addEventListener('nexor-v2-queue-changed',refreshV2PendingCount);
+ window.addEventListener('online',refreshV2PendingCount);
  onAuthStateChanged(auth,()=>{
   const accountUid=auth.currentUser?.uid||null;
   uid=accountUid;
+  v2PendingCount=0;
+  v2ExerciseBaselines.clear();
+  refreshV2PendingCount();
   watchControl(accountUid);
   load();
  });
