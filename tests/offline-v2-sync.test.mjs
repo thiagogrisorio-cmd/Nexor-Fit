@@ -53,3 +53,14 @@ test('V2 never acknowledges an unchecked set retaining a completion timestamp',a
  assert.equal(result.status,'conflict');
  assert.equal(acknowledged,false);
 });
+
+test('V2 rejects acknowledgement from a different exercise despite matching revision',async()=>{
+ let reads=0,acknowledged=false;
+ const result=await syncV2OfflineOperation({operation,
+  readRemoteExercise:async()=>{reads++;return reads===1?remote(0):{...remote(1),index:1,sets:[{done:true,completedAt:'2026-10-18T12:00:00.000Z'},{done:false,completedAt:null}]};},
+  updateRemoteSet:async()=>{},acknowledge:async()=>{acknowledged=true;}
+ });
+ assert.equal(result.status,'conflict');
+ assert.equal(result.reason,'confirmation-mismatch');
+ assert.equal(acknowledged,false);
+});
