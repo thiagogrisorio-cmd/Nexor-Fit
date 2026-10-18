@@ -146,3 +146,6 @@ Adicionado teste de auditoria com Firebase Authentication Emulator e Firestore E
 
 ## Token real emitido pelo Auth Emulator
 CI #770: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; regras Firestore V1 reprovadas. Teste `v1-retirement-audit-auth-emulator.test.mjs` atualizado para emitir custom token no Admin SDK, trocar por ID token no endpoint local do Auth Emulator e verificar com `auth.verifyIdToken(token,true)` antes de autorizar o relatório. Testa conta desabilitada e administrador autorizado. Novo CI pendente; ainda não há Cloud Function HTTP exportada nem deploy.
+
+## Correção Auth Emulator CI #782
+CI #782: unit-tests, functions-package, functions-trigger-emulator aprovados; functions-emulator falhou em `Emulator sign-in failed` porque o teste tentava autenticar conta já desabilitada. Corrigido: obter ID token antes de desabilitar conta, então confirmar que backend recusa acesso (401 ou 403, conforme fase de verificação), sem iniciar listUsers. Firestore Rules V1 continua bloqueante. Commits `d067bdf`, `c66f882`; aguardando CI, sem deploy.
