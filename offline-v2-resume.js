@@ -16,6 +16,7 @@ export function resumeV2OfflineSync({uid,isCurrentAccount,isOnline,readRemoteExe
   if(!isCurrentAccount(uid)||!isOnline())return {status:'paused',processed:0};
   const results=await syncPendingV2Edits({
    uid,
+   canAcknowledge:()=>isCurrentAccount(uid)&&isOnline(),
    readRemoteExercise:async operation=>{
     if(!isCurrentAccount(uid)||!isOnline())throw Error('Sincronização pausada: conta ou conexão alterada');
     return readRemoteExercise(operation);
