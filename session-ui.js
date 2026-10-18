@@ -99,6 +99,7 @@ function watchSession(accountUid,id){
  stopSessionListener=onSnapshot(doc(db,'users',accountUid,'sessions',id),snapshot=>{
   if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving||snapshot.metadata.hasPendingWrites)return;
   pendingOfflineOperations(accountUid).then(pending=>{
+   if(uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==id||saving)return;
    if(pending.some(item=>item.sessionId===id))return;
    applyRemoteSession(snapshot,accountUid);
   }).catch(console.warn);
