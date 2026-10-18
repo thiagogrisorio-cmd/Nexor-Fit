@@ -143,3 +143,6 @@ CI #748: quatro jobs aprovados, Firestore Rules V1 falhou. Adicionado `tests/v1-
 
 ## Auth Emulator no pipeline
 Adicionado teste de auditoria com Firebase Authentication Emulator e Firestore Emulator (`tests/v1-retirement-audit-auth-emulator.test.mjs`). Usuários fictícios habilitado/desabilitado são criados no Auth Emulator; a verificação de token permanece injetada/simulada, mas `getUser` e `listUsers` usam o SDK Admin real conectado ao emulador. Job `functions-emulator` inicia `firestore,auth`, e `firebase.json` configura porta 9099. **Não valida emissão/verificação criptográfica real de ID token**, nem endpoint Functions publicado. Novos commits aguardam CI; sem deploy.
+
+## Token real emitido pelo Auth Emulator
+CI #770: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; regras Firestore V1 reprovadas. Teste `v1-retirement-audit-auth-emulator.test.mjs` atualizado para emitir custom token no Admin SDK, trocar por ID token no endpoint local do Auth Emulator e verificar com `auth.verifyIdToken(token,true)` antes de autorizar o relatório. Testa conta desabilitada e administrador autorizado. Novo CI pendente; ainda não há Cloud Function HTTP exportada nem deploy.
