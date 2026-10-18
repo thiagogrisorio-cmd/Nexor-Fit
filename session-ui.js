@@ -131,7 +131,9 @@ function applyRemoteSession(snapshot,accountUid){
  }
   if(snapshot.exists()&&snapshot.data().schemaVersion===2){
   v2ReadOnly=true;
-  // Fail closed until the complete V2 exercise snapshot has been validated.
+  // Preserve the queued local preview; the listener already suppresses snapshots with pending V2 edits.
+  // Existing controls remain blocked until a complete revalidation is available.
+  const previousV2Session=session?.id===snapshot.id&&v2ReadOnly?session:null;
   session=null;
   v2Notice='Treino V2 detectado. Carregando exercícios em modo somente leitura.';
   render();
@@ -144,6 +146,8 @@ function applyRemoteSession(snapshot,accountUid){
    if(pendingV2.some(item=>item.sessionId===snapshot.id)){
     v2PendingCount=pendingV2.length;
     v2Notice='Alterações V2 locais pendentes. Aguarde a sincronização antes de atualizar os dados remotos.';
+    // Keep the queued local preview, but prevent another edit until sync completes.
+    session=previousV2Session;
     render();return;
    }
    session=result.status==='ready'&&result.session.status==='active'?result.session:null;
