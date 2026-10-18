@@ -149,3 +149,6 @@ CI #770: unit-tests, functions-package, functions-emulator e functions-trigger-e
 
 ## Correção Auth Emulator CI #782
 CI #782: unit-tests, functions-package, functions-trigger-emulator aprovados; functions-emulator falhou em `Emulator sign-in failed` porque o teste tentava autenticar conta já desabilitada. Corrigido: obter ID token antes de desabilitar conta, então confirmar que backend recusa acesso (401 ou 403, conforme fase de verificação), sem iniciar listUsers. Firestore Rules V1 continua bloqueante. Commits `d067bdf`, `c66f882`; aguardando CI, sem deploy.
+
+## Empacotamento isolado da auditoria
+CI #788: funções, testes unitários e emuladores aprovados; Firestore Rules V1 falha. Criado `functions/audit-emulator-bundle.js`: fábrica não exportada no entrypoint, exige os dois emuladores e valida o contrato de relatório agregado após autenticação e allowlist. Testes de bloqueio fora dos emuladores e saída com identificadores proibidos adicionados ao npm test. **Não conecta ainda o gerador completo no pacote Functions**, não expõe HTTP e não autoriza produção. Aguardando novo CI; sem deploy.
