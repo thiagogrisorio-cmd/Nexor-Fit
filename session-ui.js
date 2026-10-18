@@ -111,6 +111,7 @@ function applyRemoteSession(snapshot,accountUid){
    if(token!==v2LoadToken||uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
    v2Notice=result.status==='ready'?'Treino V2 carregado em modo somente leitura. Edição ainda indisponível.':'Treino V2 incompleto ou indisponível. Nenhuma alteração foi realizada.';
    const pendingV2=await listPendingV2Edits(accountUid);
+   if(token!==v2LoadToken||uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
    if(pendingV2.some(item=>item.sessionId===snapshot.id)){
     v2PendingCount=pendingV2.length;
     v2Notice='Alterações V2 locais pendentes. Aguarde a sincronização antes de atualizar os dados remotos.';
@@ -210,9 +211,13 @@ async function save(next, operation=null){
 }
 async function load(){
  // Keep the local V2 preview visible while queued edits await reconnection.
- if(!navigator.onLine&&v2ReadOnly&&session?.status==='active'&&uid&&uid===auth.currentUser?.uid){
+ if(v2ReadOnly&&session?.status==='active'&&uid&&uid===auth.currentUser?.uid){
   const pending=await listPendingV2Edits(uid).catch(()=>[]);
-  if(pending.some(item=>item.sessionId===session.id)){v2PendingCount=pending.length;render();return;}
+  if(pending.some(item=>item.sessionId===session.id)){
+   v2PendingCount=pending.length;
+   v2Notice='Alterações V2 aguardando sincronização. Não atualize ou conclua este treino até confirmar o envio.';
+   render();return;
+  }
  }
  const generation=++loadGeneration;
  uid=auth.currentUser?.uid||null;const accountUid=uid;ready=false;session=null;completedSessions=[];v2Notice='';v2ReadOnly=false;render();
