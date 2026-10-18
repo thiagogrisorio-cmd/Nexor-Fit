@@ -11,6 +11,9 @@ test('V2 offline pilot preserves queued preview during refresh',()=>{
  assert.match(ui,/if\(!navigator\.onLine&&v2ReadOnly&&session\?\.status==='active'/);
  assert.match(ui,/pending\.some\(item=>item\.sessionId===session\.id\)\)\{v2PendingCount=pending\.length;render\(\);return;/);
 });
+test('V2 async snapshot validates identity again after reading pending queue',()=>{
+ assert.match(ui,/const pendingV2=await listPendingV2Edits\\(accountUid\\);\\s*if\\(token!==v2LoadToken/);
+});
 test('V2 pilot refuses conflicting online edits',()=>{
  assert.match(ui,/if\(pending\.some\(item=>item\.sessionId===id&&item\.exerciseIndex===exerciseIndex\)\)throw Error/);
  assert.match(ui,/Sincronize as alterações V2 pendentes antes de concluir/);
