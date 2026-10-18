@@ -2,7 +2,7 @@ import test,{before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
-import {doc,setDoc,getDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {doc,setDoc,getDoc,updateDoc,deleteDoc,runTransaction,serverTimestamp,deleteField} from 'firebase/firestore';
 import {startSession} from '../workout-session.js';
 import {encodeSessionForFirestore} from '../firestore-session-codec.js';
 import {migrateLegacySessionAtomically} from '../session-v2-migration-transaction.js';
@@ -43,7 +43,7 @@ test('V1 to V2 parent conversion without immutable backup is rejected',async()=>
  const uid='no-backup-owner',id='no-backup-session',db=env.authenticatedContext(uid).firestore();
  const original=startSession({id,day:0,now:0});
  await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
- await assertFails(updateDoc(doc(db,'users',uid,'sessions',id),{schemaVersion:2,sets:undefined,updatedAt:serverTimestamp()}));
+ await assertFails(updateDoc(doc(db,'users',uid,'sessions',id),{schemaVersion:2,sets:deleteField(),updatedAt:serverTimestamp()}));
  const saved=await assertSucceeds(getDoc(doc(db,'users',uid,'sessions',id)));
  assert.equal(saved.data().schemaVersion,undefined);
  assert.ok(Array.isArray(saved.data().sets));
