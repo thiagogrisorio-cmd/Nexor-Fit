@@ -30,3 +30,14 @@ test('readiness must exactly match completeness and absence of blockers',()=>{
  assert.equal(assertAggregateReport({...base,blockers:['invalid-session-paths'],readyForReview:false}).readyForReview,false);
  assert.equal(assertAggregateReport({...base,complete:false,blockers:['inventory-incomplete'],readyForReview:false}).readyForReview,false);
 });
+
+test('rejects fabricated blockers inconsistent with aggregate counts',()=>{
+ const base=valid();
+ for(const blocker of ['v1-active-sessions','unknown-session-schema','orphan-session-owners']){
+  assert.throws(()=>assertAggregateReport({...base,blockers:[blocker],readyForReview:false}),/Invalid count blockers/);
+ }
+ for(const blocker of ['inventory-incomplete','orphan-audit-incomplete']){
+  assert.throws(()=>assertAggregateReport({...base,blockers:[blocker],readyForReview:false}),/Invalid incomplete blockers/);
+ }
+ assert.equal(assertAggregateReport({...base,complete:false,blockers:['orphan-audit-incomplete'],readyForReview:false}).complete,false);
+});
