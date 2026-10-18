@@ -24,3 +24,14 @@ test('hydrates all 12 V2 exercises concurrently and preserves exercise order',as
  assert.equal(result.status,'ready');
  assert.equal(result.session.sets.length,12);
 });
+
+test('rejects V2 hydration when exercise revision is invalid',async()=>{
+ for(const revision of [-1,1.5,null]){
+  const corrupt=exercises.map((row,i)=>i===5?{...row,revision}:row);
+  await assert.rejects(()=>loadWorkoutForUI({...adapter(),getDoc:async path=>{
+   const last=Number(path.split('/').at(-1));
+   const data=path.endsWith('/'+session.id)?metadata:corrupt[last];
+   return {exists:()=>data!==undefined,data:()=>data};
+  }}),/Revisão V2 inválida/);
+ }
+});
