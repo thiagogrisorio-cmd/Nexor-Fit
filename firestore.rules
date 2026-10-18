@@ -152,6 +152,7 @@ service cloud.firestore {
         && request.resource.data.original.id == sessionId
         && !request.resource.data.original.keys().hasAny(['schemaVersion'])
         && request.resource.data.original.keys().hasAll(['sets'])
+        && get(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data == request.resource.data.original
         && getAfter(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.schemaVersion == 2;
       allow update, delete: if false;
     }
