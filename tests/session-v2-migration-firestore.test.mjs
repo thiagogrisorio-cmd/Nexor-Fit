@@ -48,3 +48,15 @@ test('V1 to V2 parent conversion without immutable backup is rejected',async()=>
  assert.equal(saved.data().schemaVersion,undefined);
  assert.ok(Array.isArray(saved.data().sets));
 });
+
+test('V2 parent cannot be downgraded to legacy V1',async()=>{
+ const uid='downgrade-owner',id='downgrade-session',db=env.authenticatedContext(uid).firestore();
+ const original=startSession({id,day:0,now:0});
+ const legacy={...encodeSessionForFirestore(original),updatedAt:serverTimestamp()};
+ await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{
+  id,day:0,status:'active',startedAt:original.startedAt,restSeconds:original.restSeconds,schemaVersion:2,updatedAt:serverTimestamp()
+ }));
+ await assertFails(setDoc(doc(db,'users',uid,'sessions',id),legacy));
+ const saved=await assertSucceeds(getDoc(doc(db,'users',uid,'sessions',id)));
+ assert.equal(saved.data().schemaVersion,2);
+});
