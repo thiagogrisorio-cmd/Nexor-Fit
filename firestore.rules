@@ -60,13 +60,7 @@ service cloud.firestore {
     function validSetRow(row) {
       return row is map && validSetPair(row.items);
     }
-    // Temporary V1 compatibility only: bounded representative checks.
-    // DO NOT DEPLOY until V1 writes are retired and V2 migration is complete.
-    function validSessionSets(s) {
-      return s is list && s.size() == 12
-        && validSetRow(s[0]) && validSetRow(s[3])
-        && validSetRow(s[7]) && validSetRow(s[11]);
-    }
+    // V1 sessions remain owner-readable, but all new client writes require schemaVersion 2.
     // Active workout sessions: owner-only, bounded records.
     match /users/{uid}/sessions/{sessionId} {
       allow read: if isOwner(uid);
@@ -82,9 +76,7 @@ service cloud.firestore {
         && ((request.resource.data.keys().hasAll(['schemaVersion'])
              && request.resource.data.schemaVersion == 2
              && !request.resource.data.keys().hasAny(['sets']))
-           || (!request.resource.data.keys().hasAny(['schemaVersion'])
-             && request.resource.data.keys().hasAll(['sets'])
-             && validSessionSets(request.resource.data.sets)))
+           )
         && request.resource.data.startedAt is string
         && request.resource.data.startedAt.size() == 24
         && request.resource.data.startedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$')
