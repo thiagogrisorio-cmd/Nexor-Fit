@@ -111,7 +111,7 @@ function applyRemoteSession(snapshot,accountUid){
   const token=++v2LoadToken;
   loadWorkoutForUI({db,uid:accountUid,sessionId:snapshot.id,doc,getDoc}).then(async result=>{
    if(token!==v2LoadToken||uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
-   v2Notice=result.status==='ready'?'Treino V2 carregado em modo somente leitura. Edição ainda indisponível.':'Treino V2 incompleto ou indisponível. Nenhuma alteração foi realizada.';
+   v2Notice=result.status!=='ready'?'Treino V2 incompleto ou indisponível. Nenhuma alteração foi realizada.':v2PilotEnabledOffline()?(navigator.onLine?'Treino V2 pronto para edição.':'Treino V2 offline: edições exigem revisões previamente carregadas.'):'Treino V2 disponível para leitura. Edição requer piloto autorizado.';
    const pendingV2=await listPendingV2Edits(accountUid);
    if(token!==v2LoadToken||uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
    if(pendingV2.some(item=>item.sessionId===snapshot.id)){
