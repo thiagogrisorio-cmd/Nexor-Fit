@@ -82,7 +82,7 @@ if(new URLSearchParams(location.search).get('nexorV2Diagnostics')==='1'){
 if(new URLSearchParams(location.search).get('nexorV2StartPilot')==='1'){
  import('./offline-v2-startup.js').then(({startV2OfflineIntegration})=>{
   window.nexorStopV2OfflinePilot=startV2OfflineIntegration({
-   onResult:result=>{if(result?.status==='conflict')console.warn('Nexor V2 offline conflict; pending edits preserved');},
+   onResult:result=>{window.dispatchEvent(new Event('nexor-v2-queue-changed'));if(result?.status==='conflict'||result?.results?.some?.(item=>item.status==='conflict'))console.warn('Nexor V2 offline conflict; pending edits preserved');},
    onError:error=>console.error('Nexor V2 offline sync:',error)
   });
  }).catch(error=>console.error('Nexor V2 offline startup:',error));
