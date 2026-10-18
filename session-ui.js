@@ -244,10 +244,15 @@ async function load(){
     if(result.format==='v1'&&result.status==='ready'&&result.session?.status==='active'&&navigator.onLine&&accountUid===auth.currentUser?.uid){
      const pendingLegacy=await pendingOfflineOperations(accountUid);
      if(!pendingLegacy.some(item=>item.sessionId===id)){
-      const migration=await migrateLegacySessionAtomically({db,uid:accountUid,sessionId:id,doc,runTransaction,serverTimestamp});
-      if(migration.status==='migrated'||migration.status==='already-v2')
-       result=await loadWorkoutForUI({db,uid:accountUid,sessionId:id,doc,getDoc});
-      else v2Notice='Treino legado preservado. Migração pendente: '+migration.status+'.';
+      try{
+       const migration=await migrateLegacySessionAtomically({db,uid:accountUid,sessionId:id,doc,runTransaction,serverTimestamp});
+       if(migration.status==='migrated'||migration.status==='already-v2')
+        result=await loadWorkoutForUI({db,uid:accountUid,sessionId:id,doc,getDoc});
+       else v2Notice='Treino legado preservado. Migração pendente: '+migration.status+'.';
+      }catch(error){
+       console.warn('Nexor V1 migration:',error);
+       v2Notice='Treino legado preservado. Não foi possível migrar; reconecte e tente novamente.';
+      }
      }else v2Notice='Treino legado com alterações offline pendentes. Migração bloqueada até sincronizar.';
     }
     if(result.format==='v2'||result.status==='incomplete'){
