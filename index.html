@@ -78,8 +78,8 @@ if(new URLSearchParams(location.search).get('nexorV2Diagnostics')==='1'){
  target.hidden=false;
  import('./offline-v2-recovery-browser.js').then(({installV2RecoveryDiagnostics})=>installV2RecoveryDiagnostics({target,enabled:true})).catch(error=>{console.error('V2 diagnostics:',error);target.textContent='Diagnóstico V2 indisponível.';});
 }
-// V2 queue replay remains development-only until offline UI and recovery are validated.
-if(new URLSearchParams(location.search).get('nexorV2StartPilot')==='1'){
+// V2 is the only write path; replay account-scoped pending edits on every authenticated startup.
+{
  import('./offline-v2-startup.js').then(({startV2OfflineIntegration})=>{
   window.nexorStopV2OfflinePilot=startV2OfflineIntegration({
    onResult:result=>{window.dispatchEvent(new Event('nexor-v2-queue-changed'));if(result?.status==='conflict'||result?.results?.some?.(item=>item.status==='conflict'))console.warn('Nexor V2 offline conflict; pending edits preserved');},
