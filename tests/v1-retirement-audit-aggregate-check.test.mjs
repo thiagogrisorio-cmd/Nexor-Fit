@@ -11,7 +11,7 @@ test('rejects extra fields and personally identifying data',()=>{
 test('rejects inconsistent totals, invalid blockers and false readiness',()=>{
  assert.throws(()=>assertAggregateReport({...valid(),counts:{...valid().counts,total:1}}),/Invalid/);
  assert.throws(()=>assertAggregateReport({...valid(),blockers:['unknown']}),/Invalid/);
- assert.throws(()=>assertAggregateReport({...valid(),complete:false}),/Invalid/);
+ assert.throws(()=>assertAggregateReport({...valid(),complete:false}),/Missing incomplete blocker/);
 });
 
 test('rejects reports concealing mandatory risk blockers',()=>{
