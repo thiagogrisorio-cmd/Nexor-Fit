@@ -22,8 +22,12 @@ export async function listPendingV2Edits(uid){
  return items.filter(op=>op.kind==='v2-mark-set'&&op.id.startsWith(uid+':v2:'))
   .sort((a,b)=>a.at-b.at||a.id.localeCompare(b.id));
 }
-export async function syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet}){
+export async function syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet,canAcknowledge=()=>true}){
  if(!uid||!readRemoteExercise||!updateRemoteSet)throw Error('Sincronização incompleta');
+ const acknowledge=async id=>{
+  if(!canAcknowledge())throw Error('Sincronização pausada: conta ou conexão alterada antes da confirmação');
+  await removeOfflineOperation(id);
+ };
  const pending=await listPendingV2Edits(uid);
  const preflight=inspectV2PendingEdits(pending);
  if(!preflight.safeToReplay){
@@ -38,8 +42,8 @@ export async function syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet
   const results=[];
   for(const group of groups.values()){
    const result=group.length>1
-    ?await replayV2RebasedGroup({operations:group,readRemoteExercise,updateRemoteSet,acknowledge:removeOfflineOperation,recordReceipt:saveReceipt})
-    :await syncV2OfflineOperation({operation:group[0],readRemoteExercise,updateRemoteSet,acknowledge:removeOfflineOperation});
+    ?await replayV2RebasedGroup({operations:group,readRemoteExercise,updateRemoteSet,acknowledge,recordReceipt:saveReceipt})
+    :await syncV2OfflineOperation({operation:group[0],readRemoteExercise,updateRemoteSet,acknowledge});
    results.push(result);
    if(result.status==='conflict')break;
   }
@@ -49,7 +53,7 @@ export async function syncPendingV2Edits({uid,readRemoteExercise,updateRemoteSet
  for(const operation of pending){
   const result=await syncV2OfflineOperation({
    operation,readRemoteExercise,updateRemoteSet,
-   acknowledge:removeOfflineOperation
+   acknowledge
   });
   results.push(result);
   // Stop after a conflict so later local edits cannot overtake it.
