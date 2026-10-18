@@ -116,3 +116,6 @@ CI #686: quatro jobs aprovados, Firestore Rules continua falhando nos testes V1.
 
 ## Composição de auditoria agregada
 `v1-retirement-audit-assembly.js` reúne o inventário paginado de contas Firebase Auth e a auditoria de sessões órfãs no Firestore e entrega ao gerador de relatório agregado. Teste com fontes vazias simuladas incluído no npm test. **Ainda não está conectado ao handler administrativo e não representa auditoria de produção.** Mesmo que `readyForReview` seja verdadeiro, o gate de sete critérios de aposentadoria da V1 continua obrigatório. Sem deploy.
+
+## Composição de endpoint protegido (ainda sem exportação)
+`functions/audit-report-protected-endpoint.js` compõe o handler HTTP e o serviço Admin Auth com gerador de relatório injetável, permitindo testes de autorização antes da leitura. Não há importação direta do módulo raiz de inventário dentro de Functions (restrição de empacotamento), nem export em `functions/index.js`; portanto **a conexão efetiva com inventário Firestore/Auth e o endpoint emulado ainda não foram concluídos**. Teste com mocks adicionado. CI #702 em andamento na consulta; sem deploy.
