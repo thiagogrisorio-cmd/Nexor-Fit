@@ -179,3 +179,6 @@ CI #824: unit-tests, functions-package, functions-emulator e functions-trigger-e
 
 ## Invariante exata de prontidão do relatório — 18/10/2026
 CI #830: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules reprovado nas lacunas V1. O validador do agregado agora exige `readyForReview === (complete && blockers.length === 0)`, rejeitando tanto prontidão indevida quanto um relatório contraditório que omita prontidão sem qualquer bloqueio. Testes cobrem as duas direções e casos bloqueados válidos. Commits `bb060e4` e `19ac9eb`. Novo CI pendente; nenhuma autorização de aposentadoria V1, deploy ou merge.
+
+## Bloqueios coerentes com contagens — 18/10/2026
+CI #836: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules permanece reprovado. O validador agregado agora rejeita bloqueios de V1 ativa, schema desconhecido e proprietários órfãos quando suas contagens são zero; também rejeita marcadores de auditoria incompleta quando `complete:true`. Mantém bloqueio obrigatório quando contagens são positivas e permite incompletude verdadeira. Commits `7f8e8dc` e `ee6f448`. CI dos novos commits ainda pendente; sem deploy ou merge.
