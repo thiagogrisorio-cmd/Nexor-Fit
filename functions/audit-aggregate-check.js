@@ -7,7 +7,7 @@ export function assertAggregateReport(report){
  if(!exact(report.counts,countKeys)||!exact(report.orphanAudit,orphanKeys))throw Error('Invalid aggregate fields');
  for(const value of [...Object.values(report.counts),...Object.values(report.orphanAudit)])if(!Number.isSafeInteger(value)||value<0)throw Error('Invalid aggregate count');
  if(countKeys.slice(1).reduce((sum,key)=>sum+report.counts[key],0)!==report.counts.total)throw Error('Invalid aggregate total');
- if(report.orphanAudit.orphanOwners>report.orphanAudit.ownersScanned)throw Error('Invalid orphan count');
+ if(report.orphanAudit.orphanOwners>report.orphanAudit.ownersScanned||report.orphanAudit.ownersScanned>report.orphanAudit.sessionDocuments)throw Error('Invalid orphan count');
  const allowed=['inventory-incomplete','orphan-audit-incomplete','v1-active-sessions','unknown-session-schema','orphan-session-owners','invalid-session-paths'];
  if(report.blockers.some(item=>!allowed.includes(item))||new Set(report.blockers).size!==report.blockers.length)throw Error('Invalid blockers');
  const has=code=>report.blockers.includes(code);
