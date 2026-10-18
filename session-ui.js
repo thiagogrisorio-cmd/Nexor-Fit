@@ -5,6 +5,7 @@ import {canUseV2WorkoutPilot} from './workout-v2-rollout-policy.js';
 import {createV2Workout,updateV2Set} from './session-v2-repository.js';
 import {finishV2Workout} from './session-v2-finish.js';
 import {loadV2Summary} from './session-v2-summary-reader.js';
+import {migrateLegacySessionAtomically} from './session-v2-migration-transaction.js';
 import {startSession,markSet,finishSession,sessionProgress,remainingRest} from './workout-session.js';
 import {auth} from './auth.js';
 import {cacheOnlineWorkout,readOfflineWorkout,changeOfflineWorkout,pendingOfflineOperations} from './offline-controller.js';
@@ -228,7 +229,23 @@ async function load(){
   if(uid){
    const control=await getDoc(doc(db,'users',uid,'sessionControl','active'));
    const id=control.exists()?control.data().sessionId:'';
-   if(id){const result=await loadWorkoutForUI({db,uid:accountUid,sessionId:id,doc,getDoc});if(result.format==='v2'||result.status==='incomplete'){v2ReadOnly=true;v2Notice=result.status==='ready'?'Treino V2 em modo somente leitura.':'Treino V2 incompleto. Edição bloqueada.';}loadedSession=result.status==='ready'?result.session:null;}
+   if(id){
+    let result=await loadWorkoutForUI({db,uid:accountUid,sessionId:id,doc,getDoc});
+    if(result.format==='v1'&&navigator.onLine&&accountUid===auth.currentUser?.uid){
+     const pendingLegacy=await pendingOfflineOperations(accountUid);
+     if(!pendingLegacy.some(item=>item.sessionId===id)){
+      const migration=await migrateLegacySessionAtomically({db,uid:accountUid,sessionId:id,doc,runTransaction,serverTimestamp});
+      if(migration.status==='migrated'||migration.status==='already-v2')
+       result=await loadWorkoutForUI({db,uid:accountUid,sessionId:id,doc,getDoc});
+      else v2Notice='Treino legado preservado. Migração pendente: '+migration.status+'.';
+     }else v2Notice='Treino legado com alterações offline pendentes. Migração bloqueada até sincronizar.';
+    }
+    if(result.format==='v2'||result.status==='incomplete'){
+     v2ReadOnly=true;
+     v2Notice=result.status==='ready'?'Treino V2 pronto para edição.':'Treino V2 incompleto. Edição bloqueada.';
+    }
+    loadedSession=result.status==='ready'?result.session:null;
+   }
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
    loadedHistory=rows.docs.filter(row=>row.data().schemaVersion!==2).map(row=>decodeSessionFromFirestore(row.data())).filter(item=>item.status==='completed');
    {
