@@ -191,3 +191,6 @@ CI #851: unit-tests, functions-package, functions-emulator e functions-trigger-e
 
 ## Segmentos vazios nos caminhos de sessões — 18/10/2026
 CI #857 ainda em execução na consulta, com functions-package aprovado. A auditoria de órfãos agora considera inválidos caminhos de quatro segmentos que tenham UID vazio ou ID de sessão vazio, além das verificações estruturais anteriores. Novo teste simulado exige duas contagens `invalidPaths`, somente uma consulta Auth para o caminho válido, e ausência de identificadores no relatório. Commits `509f585` e `a25f762`; validação do novo CI pendente. Sem deploy ou merge.
+
+## Metadados de caminhos ausentes ou inválidos — 18/10/2026
+CI #863: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules reprovado. A auditoria de órfãos agora contabiliza como `invalidPaths` referências de documento sem `ref.path` textual, em vez de interromper a varredura por `split` inválido. Teste cobre metadados ausentes, caminho numérico e documento válido, com somente uma consulta Auth. Commits `7327ae8`, `84eaff3` (refatoração intermediária `9c09d70` substituída). Novo CI pendente; sem deploy ou merge.
