@@ -15,7 +15,7 @@ test('preserves second operation when remote changes between steps',async()=>{
  const result=await replayV2RebasedGroup({operations,readRemoteExercise:async()=>structuredClone(remote),
   updateRemoteSet:async op=>{remote.revision+=2;remote.sets[op.setIndex]={done:true,completedAt:'done'};},
   acknowledge:async id=>ack.push(id)});
- assert.equal(result.status,'conflict');assert.equal(result.processed,1);assert.deepEqual(ack,['op0']);
+ assert.equal(result.status,'conflict');assert.equal(result.processed,0);assert.deepEqual(ack,[]);
 });
 test('rejects repeated edits to same set without any writes',async()=>{
  let writes=0;
@@ -45,5 +45,14 @@ test('crash after receipt but before acknowledgement keeps operation unacknowled
  assert.equal(receipts.length,1);
  assert.equal(receipts[0].id,'op0');
  assert.equal(remote.revision,5);
+ assert.deepEqual(ack,[]);
+});
+
+test('sequential replay preserves queue when remote confirmation fails without receipt writer',async()=>{
+ const remote=make(),ack=[];
+ const result=await replayV2RebasedGroup({operations,readRemoteExercise:async()=>structuredClone(remote),
+  updateRemoteSet:async()=>{},acknowledge:async id=>ack.push(id)});
+ assert.equal(result.status,'conflict');
+ assert.equal(result.reason,'confirmation-mismatch');
  assert.deepEqual(ack,[]);
 });
