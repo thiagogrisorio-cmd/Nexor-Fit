@@ -13,3 +13,20 @@ test('reports V1 activity and orphan owners from paginated mock services',async(
  assert.equal(report.readyForReview,false);
  assert.ok(report.blockers.includes('orphan-session-owners'));
 });
+
+test('incomplete Auth pagination cannot claim audit readiness',async()=>{
+ let pages=0;
+ const auth={
+  listUsers:async()=>({users:[],pageToken:`more-${++pages}`}),
+  getUser:async uid=>({uid})
+ };
+ const query={orderBy(){return this;},limit(){return this;},get:async()=>({docs:[]})};
+ const db={collectionGroup:()=>query,collection:()=>query};
+ const report=await assembleRetirementAudit(auth,db);
+ assert.equal(pages,10);
+ assert.equal(report.complete,false);
+ assert.equal(report.readyForReview,false);
+ assert.ok(report.blockers.includes('inventory-incomplete'));
+ assert.equal(report.readOnly,true);
+ assert.equal(JSON.stringify(report).includes('more-'),false);
+});
