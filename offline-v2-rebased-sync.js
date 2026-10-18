@@ -26,7 +26,8 @@ export async function replayV2RebasedGroup({operations,readRemoteExercise,update
   }
   const confirmed=await readRemoteExercise(step.operation);
   const set=confirmed?.sets?.[step.operation.setIndex];
-  if(confirmed?.revision!==step.expectedRevision+1||set?.done!==step.operation.done||
+  if(confirmed?.sessionId!==step.operation.sessionId||confirmed?.index!==step.operation.exerciseIndex||
+     confirmed?.revision!==step.expectedRevision+1||set?.done!==step.operation.done||
      (step.operation.done&&typeof set?.completedAt!=='string')||
      (!step.operation.done&&set?.completedAt!==null))
    return {status:'conflict',reason:'confirmation-mismatch',processed};
