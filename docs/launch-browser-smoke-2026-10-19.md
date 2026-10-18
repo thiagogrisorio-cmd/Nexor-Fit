@@ -7,7 +7,7 @@
 - Servir a aplicação por HTTP(S) local; nunca abrir `index.html` por `file://`.
 - Usar somente projeto Firebase de teste e emuladores Auth/Firestore; não apontar testes destrutivos ao projeto de produção.
 - Preparar duas contas de teste A/B, navegador com DevTools e rede controlável; registrar data, SHA, navegador, URL, resultado e capturas/logs sem tokens.
-- Iniciar emuladores Auth/Firestore com `npx firebase emulators:start --project demo-nexor-fit-rules-test --only auth,firestore` e servir o diretório por HTTP local (por exemplo, `python3 -m http.server 8000`). Abrir `http://localhost:8000/?nexorEmulators=1`. O modo é explicitamente limitado a `localhost`, `127.0.0.1` ou `[::1]`; confirmar no painel de rede que Auth usa `127.0.0.1:9099` e Firestore usa `127.0.0.1:8080` antes de criar dados. Sem o parâmetro, a aplicação usa a configuração Firebase normal. **Não executar operações destrutivas sem confirmar os endpoints locais.**
+- Iniciar emuladores Auth/Firestore com `npx firebase emulators:start --project demo-nexor-fit-rules-test --only auth,firestore` e servir o diretório por HTTP local (por exemplo, `python3 -m http.server 8000`). Abrir `http://localhost:8000/?nexorEmulators=1`. O modo é explicitamente limitado a `localhost`, `127.0.0.1` ou `[::1]`; confirmar no painel de rede que Auth usa `127.0.0.1:9099`, Firestore usa `127.0.0.1:8080` **e ambos operam no projeto `demo-nexor-fit-rules-test`** antes de criar dados. Sem o parâmetro, a aplicação usa a configuração Firebase normal. **Não executar operações destrutivas sem confirmar os endpoints locais.**
 
 ## Sequência P0-E (registrar PASS/FAIL por etapa)
 1. **Autenticação e isolamento:** login A; verificar UID e estado; sair; login B; nenhuma sessão, fila ou dados de A visíveis em B.
