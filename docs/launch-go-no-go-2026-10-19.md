@@ -26,3 +26,6 @@ Branch `feature/workout-sessions-v1`, sem deploy/merge. CI #889 falhou em `unit-
 
 ## Regra de produtividade
 Cada mudança deve desbloquear um gate P0 ou reparar regressão concreta. Sem novos testes de auditoria periférica. Medir avanço por critérios de aceite concluídos e jobs aprovados, não commits.
+
+## Incremento de edição offline V2 — piloto, não liberado
+CI #897 confirmou unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; Firestore Rules permanece reprovado. A interface piloto agora prepara em memória revisões dos 12 exercícios ao carregar online e, se ficar offline na mesma sessão, permite enfileirar uma edição por exercício com revisão e token de base; mostra pendências e não recarrega imediatamente o estado otimista. Se não houver revisão conhecida ou já existir edição pendente do exercício, recusa a edição. **Limitações:** baselines só em memória, não suportam reinício offline; a reconciliação e o indicador após reconexão ainda requerem E2E; nenhuma conclusão offline V2. Commits `3a500c7`, `ea6f8db`. CI novo pendente, sem deploy ou merge.
