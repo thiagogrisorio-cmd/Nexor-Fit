@@ -20,8 +20,13 @@ export async function migrateLegacySessionAtomically({db,uid,sessionId,doc,runTr
   if(!parentSnapshot.exists())throw Error('Sessão original ausente');
   const original=parentSnapshot.data();
   if(original.schemaVersion===2){
-   if(childSnapshots.some(snapshot=>!snapshot.exists()))
-    return {status:'conflict',sessionId,reason:'incomplete-v2-migration'};
+   if(childSnapshots.some((snapshot,index)=>{
+    if(!snapshot.exists())return true;
+    const row=snapshot.data();
+    return row.index!==index||row.sessionId!==sessionId||!Number.isInteger(row.revision)||row.revision<0||
+     !Array.isArray(row.sets)||row.sets.length!==2||row.sets.some(set=>
+      typeof set?.done!=='boolean'||(set.completedAt!==null&&typeof set.completedAt!=='string'));
+   }))return {status:'conflict',sessionId,reason:'incomplete-v2-migration'};
    return {status:'already-v2',sessionId};
   }
   if(original.id!==sessionId)return {status:'conflict',sessionId,reason:'session-id-mismatch'};
