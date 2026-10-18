@@ -119,7 +119,7 @@ test('V2 baseline refresh discards stale rows before accepting new revisions',()
 });
 
 test('live V2 snapshot hides stale workout controls until complete hydration',()=>{
- assert.match(ui,/if\(snapshot\.exists\(\)&&snapshot\.data\(\)\.schemaVersion===2\)\{\s*v2ReadOnly=true;\s*\/\/ Fail closed until the complete V2 exercise snapshot has been validated\.\s*session=null;/);
+ assert.match(ui,/if\(snapshot\.exists\(\)&&snapshot\.data\(\)\.schemaVersion===2\)\{\s*v2ReadOnly=true;[\s\S]*?const previousV2Session=session\?\.id===snapshot\.id&&v2ReadOnly\?session:null;\s*session=null;/);
  assert.match(ui,/session=result\.status==='ready'&&result\.session\.status==='active'\?result\.session:null/);
 });
 
