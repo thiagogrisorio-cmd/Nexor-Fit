@@ -188,3 +188,6 @@ CI #842: unit-tests, functions-package, functions-emulator e functions-trigger-e
 
 ## Caminhos inválidos de sessões bloqueiam aposentadoria V1 — 18/10/2026
 CI #851: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules segue reprovado. Testes adicionais garantem que caminhos de sessão fora de `users/{uid}/sessions/{id}` sejam contados em `invalidPaths`, não provoquem consulta Auth para o caminho inválido e não apareçam no relatório. O relatório agregado mantém `complete:true` quando varredura completa, mas exige `readyForReview:false` e `invalid-session-paths` se houver caminhos inválidos. Commits `1177f1a` e `2cac037`. Novo CI pendente; sem deploy ou merge.
+
+## Segmentos vazios nos caminhos de sessões — 18/10/2026
+CI #857 ainda em execução na consulta, com functions-package aprovado. A auditoria de órfãos agora considera inválidos caminhos de quatro segmentos que tenham UID vazio ou ID de sessão vazio, além das verificações estruturais anteriores. Novo teste simulado exige duas contagens `invalidPaths`, somente uma consulta Auth para o caminho válido, e ausência de identificadores no relatório. Commits `509f585` e `a25f762`; validação do novo CI pendente. Sem deploy ou merge.
