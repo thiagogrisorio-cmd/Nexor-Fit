@@ -17,3 +17,8 @@ test('partial scans cannot pass review',()=>{
 test('rejects inconsistent counts',()=>{
  assert.throws(()=>buildV1RetirementAuditReport({inventory:{counts:{...counts,total:99},complete:true},orphans}),/inconsistente/);
 });
+
+test('rejects more examined owners than session documents',()=>{
+ assert.throws(()=>buildV1RetirementAuditReport({inventory:{counts,complete:true},orphans:{...orphans,ownersScanned:4}}),/Órfãos inconsistentes/);
+ assert.throws(()=>buildV1RetirementAuditReport({inventory:{counts,complete:true},orphans:{...orphans,orphanOwners:3}}),/Órfãos inconsistentes/);
+});
