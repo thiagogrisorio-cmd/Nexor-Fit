@@ -128,3 +128,6 @@ CI #718: quatro jobs aprovados, Firestore Rules V1 reprovado. Adicionado `functi
 
 ## Contrato estrito de relatório agregado
 `functions/audit-aggregate-check.js` agora exige conjunto exato de campos no nível superior, em `counts` e `orphanAudit`; rejeita campos extras, valores negativos, totais inconsistentes, códigos de bloqueio desconhecidos e `readyForReview` indevido. Testes cobrem tentativas de inclusão de UID/e-mail em campos extras. A verificação limita a estrutura da resposta, mas não substitui autorização, rate limit, proteção de logs nem teste com dados reais. CI #730 estava em andamento; novos commits pendentes. Sem deploy.
+
+## Teste de composição com bloqueios
+Adicionado teste que exercita inventário paginado de uma sessão V1 ativa e auditoria de um proprietário órfão com interfaces Firebase simuladas; o relatório deve negar `readyForReview`. O teste é registrado no npm test. **Não é integração com Auth Emulator/Firestore Emulator reais e não cria endpoint administrativo.** CI #738 ainda em andamento na última consulta; novos commits aguardam validação. Sem deploy.
