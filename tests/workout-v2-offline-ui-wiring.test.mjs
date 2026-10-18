@@ -19,3 +19,10 @@ test('V2 pilot refuses conflicting online edits',()=>{
  assert.match(ui,/if\(pending\.some\(item=>item\.sessionId===id&&item\.exerciseIndex===exerciseIndex\)\)throw Error/);
  assert.match(ui,/Sincronize as alterações V2 pendentes antes de concluir/);
 });
+
+test('V2 pilot blocks all legacy V1 write paths but retains legacy reads',()=>{
+ assert.match(ui,/if\(v2ReadOnly\|\|v2PilotRequested\(\)\)throw Error\('Gravação V1 bloqueada/g);
+ assert.match(ui,/const legacyBlocked=!v2ReadOnly&&v2PilotRequested\(\)/);
+ assert.match(ui,/Treino V1 preservado para leitura/);
+ assert.match(ui,/loadedHistory=rows\.docs\.filter\(row=>row\.data\(\)\.schemaVersion!==2\)/);
+});
