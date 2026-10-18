@@ -20,7 +20,8 @@ export async function syncV2OfflineOperation({operation,readRemoteExercise,updat
  // Re-read before deleting: a successful transaction alone is not a durable receipt.
  const confirmed=await readRemoteExercise(operation);
  const set=confirmed?.sets?.[operation.setIndex];
- if(confirmed?.revision!==plan.expectedRevision+1||set?.done!==operation.done||
+ if(confirmed?.sessionId!==operation.sessionId||confirmed?.index!==operation.exerciseIndex||
+    confirmed?.revision!==plan.expectedRevision+1||set?.done!==operation.done||
     (operation.done&&typeof set?.completedAt!=='string')||
     (!operation.done&&set?.completedAt!==null))
   return {status:'conflict',reason:'confirmation-mismatch',operationId:operation.id};
