@@ -203,6 +203,11 @@ async function save(next, operation=null){
  }catch(error){if(accountAtStart===auth.currentUser?.uid)await load();throw error;}finally{saving=false;render();}
 }
 async function load(){
+ // Keep the local V2 preview visible while queued edits await reconnection.
+ if(!navigator.onLine&&v2ReadOnly&&session?.status==='active'&&uid&&uid===auth.currentUser?.uid){
+  const pending=await listPendingV2Edits(uid).catch(()=>[]);
+  if(pending.some(item=>item.sessionId===session.id)){v2PendingCount=pending.length;render();return;}
+ }
  const generation=++loadGeneration;
  uid=auth.currentUser?.uid||null;const accountUid=uid;ready=false;session=null;completedSessions=[];v2Notice='';v2ReadOnly=false;render();
  let loadedSession=null,loadedHistory=[];
