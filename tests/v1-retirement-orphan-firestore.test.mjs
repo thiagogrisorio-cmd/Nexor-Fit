@@ -18,3 +18,19 @@ test('does not mistake Auth outages for missing owners',async()=>{
  const db={collectionGroup:()=>({orderBy:()=>({limit:()=>({get:async()=>({docs:[docs[0]]})})})})};
  await assert.rejects(auditFirestoreSessionOrphans({db,auth:{getUser:async()=>{throw Object.assign(new Error('network'),{code:'auth/internal-error'});}}}),/network/);
 });
+
+test('invalid session paths are counted without owner lookup or identifier leakage',async()=>{
+ const rows=['organizations/private/sessions/bad','users/valid/sessions/good'].map(path=>({ref:{path}}));
+ let checked=0;
+ const db={collectionGroup:()=>({orderBy(){return this;},limit(){return this;},get:async()=>({docs:rows})})};
+ const auth={getUser:async()=>{checked++;return {uid:'valid'};}};
+ const report=await auditFirestoreSessionOrphans({db,auth,pageSize:10});
+ assert.equal(report.invalidPaths,1);
+ assert.equal(report.sessionDocuments,2);
+ assert.equal(report.ownersScanned,1);
+ assert.equal(report.orphanOwners,0);
+ assert.equal(checked,1);
+ assert.equal(report.complete,true);
+ assert.equal(JSON.stringify(report).includes('private'),false);
+ assert.equal(JSON.stringify(report).includes('good'),false);
+});
