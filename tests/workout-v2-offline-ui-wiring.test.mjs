@@ -48,3 +48,12 @@ test('completed V2 workouts appear in history without the pilot flag',()=>{
  assert.match(ui,/for\(const row of rows\.docs\.filter\(item=>item\.data\(\)\.schemaVersion===2&&item\.data\(\)\.status==='completed'\)\)/);
  assert.match(ui,/const summary=await loadV2Summary/);
 });
+
+test('V2 is the default session write path, without a pilot query flag',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ assert.match(ui,/const v2PilotRequested=\(\)=>true/);
+ assert.match(ui,/const pilotRequested=v2PilotRequested\(\)/);
+ assert.match(ui,/else throw Error\('Início V1 desativado/);
+ assert.match(html,/startV2OfflineIntegration\(\{/);
+ assert.doesNotMatch(html,/if\(new URLSearchParams\(location\.search\)\.get\('nexorV2StartPilot'\)===/);
+});
