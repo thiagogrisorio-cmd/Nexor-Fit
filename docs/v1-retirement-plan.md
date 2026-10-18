@@ -104,3 +104,6 @@ Criado `v1-retirement-audit-report.js`: recebe resultados de inventário e audit
 
 ## Painel administrativo de auditoria (protótipo local)
 Criado `admin-audit.html` em preto e laranja, separado do app de treinos, com importação manual de JSON agregado. `v1-retirement-audit-dashboard.js` valida métricas, bloqueios conhecidos e estado somente leitura; DOM renderizado via `textContent` para evitar injeção HTML. O painel não consulta Firebase, não possui autenticação própria nem autoriza deploy/migração. **Não publicar `admin-audit.html` como interface administrativa aberta em produção**; para uso real exigir controle de acesso, isolamento de hosting e trilha de auditoria. Testes incluídos no CI. CI #660: quatro jobs aprovados, Firestore Rules ainda falha em V1; novo CI pendente.
+
+## Política preliminar de acesso administrativo
+Criado `v1-retirement-audit-access.js` com regra de negação por padrão: somente ambiente `emulator`, identidade com e-mail verificado e UID presente em allowlist explícita. Testes de negação para produção, conta não verificada e UID não autorizado. **Esta é apenas uma função pura, ainda não integrada a um endpoint, autenticação Firebase real ou ao painel HTML.** Não concede proteção ao arquivo estático nem permite executar inventário de produção. CI #670 estava na fila; novos commits pendentes. Sem deploy.
