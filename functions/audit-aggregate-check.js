@@ -10,6 +10,9 @@ export function assertAggregateReport(report){
  if(report.orphanAudit.orphanOwners>report.orphanAudit.ownersScanned)throw Error('Invalid orphan count');
  const allowed=['inventory-incomplete','orphan-audit-incomplete','v1-active-sessions','unknown-session-schema','orphan-session-owners','invalid-session-paths'];
  if(report.blockers.some(item=>!allowed.includes(item))||new Set(report.blockers).size!==report.blockers.length)throw Error('Invalid blockers');
+ const has=code=>report.blockers.includes(code);
+ if((report.counts.v1Active>0&&!has('v1-active-sessions'))||(report.counts.unknown>0&&!has('unknown-session-schema'))||(report.orphanAudit.orphanOwners>0&&!has('orphan-session-owners')))throw Error('Missing required blockers');
+ if(!report.complete&&!has('inventory-incomplete')&&!has('orphan-audit-incomplete'))throw Error('Missing incomplete blocker');
  if(report.readyForReview&&(!report.complete||report.blockers.length))throw Error('Invalid readiness');
  return report;
 }
