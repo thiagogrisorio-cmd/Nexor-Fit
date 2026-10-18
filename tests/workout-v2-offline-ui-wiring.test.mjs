@@ -57,3 +57,11 @@ test('V2 is the default session write path, without a pilot query flag',()=>{
  assert.match(html,/startV2OfflineIntegration\(\{/);
  assert.doesNotMatch(html,/if\(new URLSearchParams\(location\.search\)\.get\('nexorV2StartPilot'\)===/);
 });
+
+test('active V1 sessions migrate atomically before V2 editing is enabled',()=>{
+ assert.match(ui,/import \{migrateLegacySessionAtomically\} from '\.\/session-v2-migration-transaction\.js'/);
+ assert.match(ui,/result\.format==='v1'&&result\.status==='ready'&&result\.session\?\.status==='active'&&navigator\.onLine/);
+ assert.match(ui,/pendingLegacy\.some\(item=>item\.sessionId===id\)/);
+ assert.match(ui,/migrateLegacySessionAtomically\(\{db,uid:accountUid,sessionId:id,doc,runTransaction,serverTimestamp\}\)/);
+ assert.match(ui,/migration\.status==='migrated'\|\|migration\.status==='already-v2'/);
+});
