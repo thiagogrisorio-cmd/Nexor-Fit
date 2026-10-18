@@ -38,6 +38,7 @@ async function queueOfflineV2PilotSet(exerciseIndex,setIndex){
  if(!baseline||!set||typeof set.done!=='boolean'||(set.completedAt!==null&&typeof set.completedAt!=='string'))throw Error('Abra este treino online antes de editar offline');
  const pending=await listPendingV2Edits(account);
  if(pending.some(item=>item.sessionId===id&&item.exerciseIndex===exerciseIndex))throw Error('Há edição pendente neste exercício; sincronize antes de continuar');
+ if(uid!==account||auth.currentUser?.uid!==account||session?.id!==id||navigator.onLine)throw Error('Conta, sessão ou conectividade alterada durante a edição');
  const desired=!session.sets[exerciseIndex][setIndex].done;
  await queueV2SetEdit({uid:account,id:globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+exerciseIndex+'-'+setIndex,sessionId:id,exerciseIndex,setIndex,done:desired,baseRevision:baseline.revision,baseCompletedAt:set.completedAt});
  if(uid!==account||session?.id!==id)return;
