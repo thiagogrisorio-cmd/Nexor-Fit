@@ -26,3 +26,7 @@ test('V2 pilot blocks all legacy V1 write paths but retains legacy reads',()=>{
  assert.match(ui,/Treino V1 preservado para leitura/);
  assert.match(ui,/loadedHistory=rows\.docs\.filter\(row=>row\.data\(\)\.schemaVersion!==2\)/);
 });
+
+test('V2 offline edit rechecks owner and session after pending lookup',()=>{
+ assert.match(ui,/if\(uid!==account\|\|auth\.currentUser\?\.uid!==account\|\|session\?\.id!==id\|\|navigator\.onLine\)throw Error/);
+});
