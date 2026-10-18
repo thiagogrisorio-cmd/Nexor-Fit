@@ -176,3 +176,6 @@ Adicionado teste de integração com serviços simulados em `tests/v1-retirement
 
 ## Limite de paginação na auditoria de órfãos — 18/10/2026
 CI #824: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; Firestore Rules continua reprovado pelas limitações V1. Adicionado teste com 1.000 páginas simuladas de 100 documentos cada, exigindo `orphan-audit-incomplete`, `complete:false`, `readyForReview:false`, contagem agregada de 100.000 documentos e ausência de caminhos/IDs na resposta. Commits `daf4d5f` e `a3396d4` (ajuste para páginas completas). O teste novo aguarda CI; nenhum deploy ou merge.
+
+## Invariante exata de prontidão do relatório — 18/10/2026
+CI #830: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules reprovado nas lacunas V1. O validador do agregado agora exige `readyForReview === (complete && blockers.length === 0)`, rejeitando tanto prontidão indevida quanto um relatório contraditório que omita prontidão sem qualquer bloqueio. Testes cobrem as duas direções e casos bloqueados válidos. Commits `bb060e4` e `19ac9eb`. Novo CI pendente; nenhuma autorização de aposentadoria V1, deploy ou merge.
