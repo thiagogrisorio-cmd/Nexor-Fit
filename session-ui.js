@@ -105,6 +105,16 @@ function watchSession(accountUid,id){
 }
 function applyRemoteSession(snapshot,accountUid){
  if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving)return;
+ // A legacy live snapshot must pass through the guarded migration loader.
+ // Never present an active V1 document as editable or overwrite V2 state.
+ if(snapshot.exists()&&snapshot.data().schemaVersion!==2){
+  v2ReadOnly=false;
+  v2Notice='Treino legado detectado. Migração V2 necessária antes de editar.';
+  session=null;
+  render();
+  if(navigator.onLine)load().catch(error=>console.warn('Nexor V1 migration load:',error));
+  return;
+ }
   if(snapshot.exists()&&snapshot.data().schemaVersion===2){
   v2ReadOnly=true;
   v2Notice='Treino V2 detectado. Carregando exercícios em modo somente leitura.';
