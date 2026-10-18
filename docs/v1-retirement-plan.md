@@ -125,3 +125,6 @@ Criado `functions/audit-provider.js`, compositor de fontes injetadas, e teste ga
 
 ## Guarda preliminar de formato de relatório
 CI #718: quatro jobs aprovados, Firestore Rules V1 reprovado. Adicionado `functions/audit-aggregate-check.js` e aplicado ao provider; rejeita saída sem `readOnly:true`, `counts` e `blockers` como array. Testes incluídos. **Validação é apenas estrutural mínima**, ainda não valida campos extras/PII, não substitui controle de acesso e não há endpoint exportado nem inventário real empacotado no backend. Não usar em produção.
+
+## Contrato estrito de relatório agregado
+`functions/audit-aggregate-check.js` agora exige conjunto exato de campos no nível superior, em `counts` e `orphanAudit`; rejeita campos extras, valores negativos, totais inconsistentes, códigos de bloqueio desconhecidos e `readyForReview` indevido. Testes cobrem tentativas de inclusão de UID/e-mail em campos extras. A verificação limita a estrutura da resposta, mas não substitui autorização, rate limit, proteção de logs nem teste com dados reais. CI #730 estava em andamento; novos commits pendentes. Sem deploy.
