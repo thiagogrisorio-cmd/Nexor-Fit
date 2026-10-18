@@ -12,7 +12,7 @@ after(async()=>{if(env)await env.cleanup();});
 test('atomic migration keeps immutable V1 backup and creates 12 V2 children',async()=>{
  const uid='backup-owner',id='backup-session',db=env.authenticatedContext(uid).firestore();
  const original=startSession({id,day:0,now:0});
- await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
+ await env.withSecurityRulesDisabled(async context=>setDoc(doc(context.firestore(),'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
  await assertSucceeds(setDoc(doc(db,'users',uid,'sessionControl','active'),{sessionId:id,updatedAt:serverTimestamp()}));
  const result=await assertSucceeds(migrateLegacySessionAtomically({db,uid,sessionId:id,doc,runTransaction,serverTimestamp}));
  assert.equal(result.status,'migrated');
@@ -29,7 +29,7 @@ test('atomic migration keeps immutable V1 backup and creates 12 V2 children',asy
 test('atomic migration refuses stale control pointer without backup or V2 writes',async()=>{
  const uid='stale-owner',id='stale-session',db=env.authenticatedContext(uid).firestore();
  const original=startSession({id,day:0,now:0});
- await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
+ await env.withSecurityRulesDisabled(async context=>setDoc(doc(context.firestore(),'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
  await assertSucceeds(setDoc(doc(db,'users',uid,'sessionControl','active'),{sessionId:'another-session',updatedAt:serverTimestamp()}));
  const result=await migrateLegacySessionAtomically({db,uid,sessionId:id,doc,runTransaction,serverTimestamp});
  assert.equal(result.status,'conflict');
@@ -42,7 +42,7 @@ test('atomic migration refuses stale control pointer without backup or V2 writes
 test('V1 to V2 parent conversion without immutable backup is rejected',async()=>{
  const uid='no-backup-owner',id='no-backup-session',db=env.authenticatedContext(uid).firestore();
  const original=startSession({id,day:0,now:0});
- await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
+ await env.withSecurityRulesDisabled(async context=>setDoc(doc(context.firestore(),'users',uid,'sessions',id),{...encodeSessionForFirestore(original),updatedAt:serverTimestamp()}));
  await assertFails(updateDoc(doc(db,'users',uid,'sessions',id),{schemaVersion:2,sets:deleteField(),updatedAt:serverTimestamp()}));
  const saved=await assertSucceeds(getDoc(doc(db,'users',uid,'sessions',id)));
  assert.equal(saved.data().schemaVersion,undefined);
