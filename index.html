@@ -78,6 +78,15 @@ if(new URLSearchParams(location.search).get('nexorV2Diagnostics')==='1'){
  target.hidden=false;
  import('./offline-v2-recovery-browser.js').then(({installV2RecoveryDiagnostics})=>installV2RecoveryDiagnostics({target,enabled:true})).catch(error=>{console.error('V2 diagnostics:',error);target.textContent='Diagnóstico V2 indisponível.';});
 }
+// V2 queue replay remains development-only until offline UI and recovery are validated.
+if(new URLSearchParams(location.search).get('nexorV2StartPilot')==='1'){
+ import('./offline-v2-startup.js').then(({startV2OfflineIntegration})=>{
+  window.nexorStopV2OfflinePilot=startV2OfflineIntegration({
+   onResult:result=>{if(result?.status==='conflict')console.warn('Nexor V2 offline conflict; pending edits preserved');},
+   onError:error=>console.error('Nexor V2 offline sync:',error)
+  });
+ }).catch(error=>console.error('Nexor V2 offline startup:',error));
+}
 import('./session-ui.js').then(({initSessionUI})=>{window.nexorSessionUI=initSessionUI(()=>active)}).catch(console.error);
 function localData(){return {progress:read('nexor_fb4_state',{}),logs:read('nexor_fit_completion_log',[]),sessionDone:read('nexor_fit_session_done',{})}}
 function loadData(data){progress=data.progress;logs=data.logs;sessionDone=data.sessionDone;if(screen==='home')renderHome();else if(screen==='workouts')renderSelect();else renderWorkout()}
