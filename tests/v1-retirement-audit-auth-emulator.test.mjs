@@ -13,6 +13,8 @@ test('Firebase Auth emulator validates disabled and allowlisted admin before Fir
   const auth=getAuth(app),db=getFirestore(app);
   const admin=await auth.createUser({email:'audit-admin@example.test',emailVerified:true});
   const disabled=await auth.createUser({email:'audit-disabled@example.test',emailVerified:true});
+  const unverified=await auth.createUser({email:'audit-unverified@example.test',emailVerified:false});
+  const outsider=await auth.createUser({email:'audit-outsider@example.test',emailVerified:true});
   await db.doc('users/'+admin.uid+'/sessions/s1').set({id:'s1',status:'active',sets:[]});
   let scans=0;
   const trackedAuth={verifyIdToken:(token)=>auth.verifyIdToken(token,true),getUser:uid=>auth.getUser(uid),listUsers:async(...args)=>{scans++;return auth.listUsers(...args);}};
@@ -25,10 +27,23 @@ test('Firebase Auth emulator validates disabled and allowlisted admin before Fir
   };
   const disabledToken=await emulatorSignIn(disabled);
   const adminToken=await emulatorSignIn(admin);
+  const unverifiedToken=await emulatorSignIn(unverified);
+  const outsiderToken=await emulatorSignIn(outsider);
   await auth.updateUser(disabled.uid,{disabled:true});
   const request={method:'POST',headers:{authorization:'Bearer '+disabledToken}};
   const denied=response();await createLocalAuditEndpoint({adminAuth:trackedAuth,db,allowedUids:[disabled.uid]})(request,denied);
   assert.ok([401,403].includes(denied.code));assert.equal(scans,0);
+  for(const [headers,allowlist,expected] of [
+   [{},[admin.uid],401],
+   [{authorization:'Bearer invalid-token'},[admin.uid],401],
+   [{authorization:'Bearer '+unverifiedToken},[unverified.uid],403],
+   [{authorization:'Bearer '+outsiderToken},[admin.uid],403]
+  ]){
+   const deniedCase=response();
+   await createLocalAuditEndpoint({adminAuth:trackedAuth,db,allowedUids:allowlist})({method:'POST',headers},deniedCase);
+   assert.equal(deniedCase.code,expected);
+   assert.equal(scans,0,'Denied requests must not enumerate users');
+  }
   request.headers.authorization='Bearer '+adminToken;
   const ok=response();await createLocalAuditEndpoint({adminAuth:trackedAuth,db,allowedUids:[admin.uid]})(request,ok);
   assert.equal(ok.code,200);assert.equal(ok.body.counts.v1Active,1);
