@@ -30,3 +30,10 @@ test('V1 recovery export is read-only and account-scoped',()=>{
  assert.match(status,/buildLegacyV1RecoveryExport/);
  assert.match(status,/Exportar recuperação V1/);
 });
+
+test('retired V1 queue never promises automatic synchronization',()=>{
+ const status=readFileSync(new URL('../offline-status.js',import.meta.url),'utf8');
+ assert.match(status,/V1 preservada\(s\), sem sincronização automática/);
+ assert.match(status,/Exporte o arquivo de recuperação antes de limpar os dados/);
+ assert.doesNotMatch(status,/alteração\(ões\) offline aguardando sincronização/);
+});
