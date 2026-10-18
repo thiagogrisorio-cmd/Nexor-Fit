@@ -56,3 +56,14 @@ test('sequential replay preserves queue when remote confirmation fails without r
  assert.equal(result.reason,'confirmation-mismatch');
  assert.deepEqual(ack,[]);
 });
+
+test('rejects exercise identity switch between planning and write',async()=>{
+ let reads=0,writes=0;
+ const result=await replayV2RebasedGroup({operations,
+  readRemoteExercise:async()=>{reads++;return reads===1?make():{...make(),index:3};},
+  updateRemoteSet:async()=>{writes++;},acknowledge:async()=>{}
+ });
+ assert.equal(result.status,'conflict');
+ assert.equal(result.reason,'remote-changed-during-replay');
+ assert.equal(writes,0);
+});
