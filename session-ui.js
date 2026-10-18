@@ -131,6 +131,8 @@ function applyRemoteSession(snapshot,accountUid){
  }
   if(snapshot.exists()&&snapshot.data().schemaVersion===2){
   v2ReadOnly=true;
+  // Fail closed until the complete V2 exercise snapshot has been validated.
+  session=null;
   v2Notice='Treino V2 detectado. Carregando exercícios em modo somente leitura.';
   render();
   const token=++v2LoadToken;
