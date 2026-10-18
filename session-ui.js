@@ -56,6 +56,7 @@ async function refreshV2PendingCount(){
   render();
  }catch(error){console.warn('Nexor V2 pending status:',error);}
 }
+const v2PilotRequested=()=>new URLSearchParams(location.search).get('nexorV2StartPilot')==='1';
 const v2PilotEnabledOffline=()=>new URLSearchParams(location.search).get('nexorV2StartPilot')==='1'&&!!uid&&uid===auth.currentUser?.uid;
 const v2PilotEnabled=()=>canUseV2WorkoutPilot({search:location.search,uid,currentUid:auth.currentUser?.uid,online:navigator.onLine});
 async function editV2PilotSet(exerciseIndex,setIndex){
@@ -150,7 +151,7 @@ let offlineSaving=false;
 const activeCacheKey=account=>'nexor_fit_offline_active_'+account;
 const notifyQueue=()=>window.dispatchEvent(new Event('nexor-offline-queue-changed'));
 async function offlineEdit(kind,exercise,set,done){
- if(v2ReadOnly)throw Error('Sessão V2 somente leitura');
+ if(v2ReadOnly||v2PilotRequested())throw Error('Gravação V1 bloqueada no piloto V2; migração necessária');
  const account=auth.currentUser?.uid;
  if(!account||!session?.id)throw Error('Sessão offline indisponível');
  const pending=await pendingOfflineOperations(account);
@@ -170,7 +171,7 @@ const local=()=>{try{return JSON.parse(localStorage.getItem(key))}catch{return n
 const fmt=seconds=>[Math.floor(seconds/3600),Math.floor(seconds%3600/60),seconds%60].map(n=>String(n).padStart(2,'0')).join(':');
 const restfmt=seconds=>String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
 async function save(next, operation=null){
- if(v2ReadOnly)throw Error('Sessão V2 somente leitura');
+ if(v2ReadOnly||v2PilotRequested())throw Error('Gravação V1 bloqueada no piloto V2; migração necessária');
  if(saving)throw Error('Aguarde a gravação anterior');
  const accountAtStart=uid;
  saving=true;render();
@@ -283,10 +284,11 @@ function render(){
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
  const rest=remainingRest(session);$('sessionRest').textContent=rest?restfmt(rest):'Pronto para a próxima série';
+ const legacyBlocked=!v2ReadOnly&&v2PilotRequested();
  const pilotEdit=v2ReadOnly&&v2PilotEnabledOffline()&&!!uid&&(navigator.onLine||v2ExerciseBaselines.size>0);
- const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving,v2ReadOnly,pilotEdit]);
- if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||(v2ReadOnly&&!pilotEdit)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
- $('finishSession').disabled=saving||offlineSaving||(v2ReadOnly&&!(v2PilotEnabled()&&!!uid&&navigator.onLine));
+ const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving,v2ReadOnly,pilotEdit,legacyBlocked]);
+ if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&!pilotEdit)||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
+ $('finishSession').disabled=saving||offlineSaving||(v2ReadOnly&&!(v2PilotEnabled()&&!!uid&&navigator.onLine))||legacyBlocked;
 }
 export function initSessionUI(getDay){
  window.nexorActiveDay=getDay;
@@ -312,11 +314,13 @@ export function initSessionUI(getDay){
  $('sessionSetList').onclick=async event=>{
   const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving)return;
   const [i,j]=button.dataset.set.split('-').map(Number);
+  if(!v2ReadOnly&&v2PilotRequested()){alert('Treino V1 preservado para leitura. Migração para V2 necessária antes de editar.');return;}
   if(v2ReadOnly){const wasOffline=!navigator.onLine;try{saving=true;render();if(wasOffline)await queueOfflineV2PilotSet(i,j);else await editV2PilotSet(i,j);}catch(e){console.error('V2 set:',e);alert('Não foi possível atualizar a série V2. Abra o treino online antes de editar offline ou sincronize as pendências.');}finally{saving=false;if(!wasOffline)await load();render();}return;}
   try{if(await offlineEdit('mark-set',i,j,!session.sets[i][j].done))return;await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
   if(!session||saving||offlineSaving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
+  if(!v2ReadOnly&&v2PilotRequested()){alert('Treino V1 preservado para leitura. Migração para V2 necessária antes de concluir.');return;}
   if(v2ReadOnly){
    if(!v2PilotEnabled()||!uid||auth.currentUser?.uid!==uid||!navigator.onLine)return;
    const account=uid,id=session.id;
