@@ -107,3 +107,6 @@ Criado `admin-audit.html` em preto e laranja, separado do app de treinos, com im
 
 ## Política preliminar de acesso administrativo
 Criado `v1-retirement-audit-access.js` com regra de negação por padrão: somente ambiente `emulator`, identidade com e-mail verificado e UID presente em allowlist explícita. Testes de negação para produção, conta não verificada e UID não autorizado. **Esta é apenas uma função pura, ainda não integrada a um endpoint, autenticação Firebase real ou ao painel HTML.** Não concede proteção ao arquivo estático nem permite executar inventário de produção. CI #670 estava na fila; novos commits pendentes. Sem deploy.
+
+## Handler HTTP administrativo (não exposto)
+Criado `functions/audit-report-handler.js`, handler injetável com POST obrigatório, Bearer token, verificação de token, autorização no servidor e relatório gerado apenas após autorização. Retorna 401/403/405/503 sem expor erros internos. Testes unitários garantem que requisições não autorizadas não executam o relatório. **Ainda não há endpoint exportado no functions/index.js, nem verificação real Firebase Admin ou ligação ao inventário.** A implementação é um componente preparatório, não serviço acessível; produção permanece bloqueada. CI #678 estava na fila; novos commits pendentes.
