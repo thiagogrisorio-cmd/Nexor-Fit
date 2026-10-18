@@ -173,3 +173,6 @@ CI #816 estava em andamento na consulta (functions-package aprovado). Acrescenta
 
 ## Paginação incompleta de Auth bloqueia prontidão — 18/10/2026
 Adicionado teste de integração com serviços simulados em `tests/v1-retirement-audit-assembly-blockers.test.mjs`: dez páginas Auth consecutivas com cursor de continuação excedem o limite de descoberta; o relatório agregado deve marcar `complete:false`, `readyForReview:false` e `inventory-incomplete`, sem expor cursor. Commit `6590d23`. CI #820 estava em execução na consulta (functions-package aprovado); validação do novo commit ainda pendente. Nenhum deploy ou merge.
+
+## Limite de paginação na auditoria de órfãos — 18/10/2026
+CI #824: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; Firestore Rules continua reprovado pelas limitações V1. Adicionado teste com 1.000 páginas simuladas de 100 documentos cada, exigindo `orphan-audit-incomplete`, `complete:false`, `readyForReview:false`, contagem agregada de 100.000 documentos e ausência de caminhos/IDs na resposta. Commits `daf4d5f` e `a3396d4` (ajuste para páginas completas). O teste novo aguarda CI; nenhum deploy ou merge.
