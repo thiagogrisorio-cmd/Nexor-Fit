@@ -249,7 +249,7 @@ async function load(){
   }else {loadedSession=local();loadedHistory=JSON.parse(localStorage.getItem(historyKey)||'[]').slice(-50).reverse();}
   if(generation!==loadGeneration||accountUid!==uid||saving)return;
   session=loadedSession;completedSessions=loadedHistory;
-  if(accountUid){
+  if(accountUid&&!v2ReadOnly){
    const cachedId=localStorage.getItem(activeCacheKey(accountUid));
    const pending=await pendingOfflineOperations(accountUid);
    if(cachedId&&pending.some(item=>item.sessionId===cachedId)){
@@ -265,7 +265,7 @@ async function load(){
   if(accountUid&&session?.status==='active'&&v2ReadOnly&&v2PilotEnabled()){
    await primeV2OfflineBaselines(accountUid,session.id).catch(error=>console.warn('Nexor V2 offline baseline:',error));
   }
-  if(accountUid&&session?.status==='active')await cacheOnlineWorkout(accountUid,session).then(()=>localStorage.setItem(activeCacheKey(accountUid),session.id)).catch(console.warn);
+  if(accountUid&&session?.status==='active'&&!v2ReadOnly)await cacheOnlineWorkout(accountUid,session).then(()=>localStorage.setItem(activeCacheKey(accountUid),session.id)).catch(console.warn);
   ready=true;
  }catch(error){if(generation!==loadGeneration)return;ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
  render();
