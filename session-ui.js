@@ -101,7 +101,11 @@ function watchSession(accountUid,id){
   pendingOfflineOperations(accountUid).then(pending=>{
    if(uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==id||saving)return;
    if(pending.some(item=>item.sessionId===id))return;
-   applyRemoteSession(snapshot,accountUid);
+   listPendingV2Edits(accountUid).then(v2Pending=>{
+    if(uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==id||saving)return;
+    if(v2Pending.some(item=>item.sessionId===id))return;
+    applyRemoteSession(snapshot,accountUid);
+   }).catch(console.warn);
   }).catch(console.warn);
  },error=>console.error('Nexor live session:',error));
 }
