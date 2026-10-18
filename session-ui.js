@@ -110,6 +110,12 @@ function applyRemoteSession(snapshot,accountUid){
   loadWorkoutForUI({db,uid:accountUid,sessionId:snapshot.id,doc,getDoc}).then(result=>{
    if(token!==v2LoadToken||uid!==accountUid||auth.currentUser?.uid!==accountUid||observedSessionId!==snapshot.id)return;
    v2Notice=result.status==='ready'?'Treino V2 carregado em modo somente leitura. Edição ainda indisponível.':'Treino V2 incompleto ou indisponível. Nenhuma alteração foi realizada.';
+   const pendingV2=await listPendingV2Edits(accountUid);
+   if(pendingV2.some(item=>item.sessionId===snapshot.id)){
+    v2PendingCount=pendingV2.length;
+    v2Notice='Alterações V2 locais pendentes. Aguarde a sincronização antes de atualizar os dados remotos.';
+    render();return;
+   }
    session=result.status==='ready'&&result.session.status==='active'?result.session:null;
    if(session&&v2PilotEnabled())primeV2OfflineBaselines(accountUid,snapshot.id).catch(console.warn);
    render();
