@@ -19,6 +19,11 @@ async function runSync(){
  const account=auth.currentUser?.uid;
  if(!account||!navigator.onLine)return {status:'offline',synced:0,conflicts:[]};
  const queued=await pendingOfflineOperations(account);
+ // V1 writes are retired. Preserve every queued operation for explicit recovery;
+ // never replay into V2 or silently acknowledge legacy edits.
+ if(queued.length)return {status:'needs-review',synced:0,conflicts:[...new Set(queued.map(op=>op.sessionId))].map(sessionId=>({sessionId,reason:'legacy-v1-writes-retired'}))};
+ return {status:'complete',synced:0,conflicts:[]};
+ /* Legacy V1 transaction code retained temporarily for migration reference.
  const groups=new Map();
  for(const op of queued){
   if(!groups.has(op.sessionId))groups.set(op.sessionId,[]);
@@ -62,4 +67,5 @@ async function runSync(){
  }
  signal();
  return {status:conflicts.length?'needs-review':'complete',synced,conflicts};
+ */
 }
