@@ -69,7 +69,9 @@ test('active V1 sessions migrate atomically before V2 editing is enabled',()=>{
 test('live legacy snapshots cannot bypass the guarded V1 to V2 migration',()=>{
  assert.match(ui,/if\(snapshot\.exists\(\)&&snapshot\.data\(\)\.schemaVersion!==2\)\{/);
  assert.match(ui,/Treino legado detectado\. Migração V2 necessária antes de editar/);
- assert.match(ui,/if\(navigator\.onLine\)load\(\)\.catch/);
+ assert.match(ui,/if\(navigator\.onLine&&!legacySnapshotReloadInFlight\)/);
+ assert.match(ui,/legacySnapshotReloadInFlight=true/);
+ assert.match(ui,/\.finally\(\(\)=>\{legacySnapshotReloadInFlight=false;\}\)/);
 });
 
 test('failed V1 migration preserves the legacy workout read path',()=>{
