@@ -3,11 +3,11 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPasswor
 import { firebaseConfig } from './firebase-config.js';
 import {connectAuthEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {getFirestore,connectFirestoreEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
-export const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
 // Explicit local-only smoke-test mode; never connect production domains to emulators.
-import {shouldUseLocalEmulators} from './local-emulator-policy.js';
+import {shouldUseLocalEmulators,emulatorFirebaseConfig} from './local-emulator-policy.js';
 export const usingLocalEmulators=shouldUseLocalEmulators({hostname:location.hostname,search:location.search});
+export const app = initializeApp(usingLocalEmulators?emulatorFirebaseConfig(firebaseConfig):firebaseConfig);
+export const auth = getAuth(app);
 if(usingLocalEmulators){
  connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});
  connectFirestoreEmulator(getFirestore(app),'127.0.0.1',8080);
