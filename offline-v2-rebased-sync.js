@@ -13,7 +13,8 @@ export async function replayV2RebasedGroup({operations,readRemoteExercise,update
  let processed=0;
  for(const step of plan.steps){
   const remote=await readRemoteExercise(step.operation);
-  if(remote.revision!==step.expectedRevision||
+  if(remote?.sessionId!==step.operation.sessionId||remote?.index!==step.operation.exerciseIndex||
+     remote.revision!==step.expectedRevision||
      remote.sets?.[step.operation.setIndex]?.completedAt!==step.expectedCompletedAt)
    return {status:'conflict',reason:'remote-changed-during-replay',processed};
   try{
