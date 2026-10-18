@@ -167,3 +167,6 @@ CI #806: unit-tests, functions-package, functions-emulator e functions-trigger-e
 
 ## Correção de asserção no CI #812 — 18/10/2026
 CI #812: functions-emulator, functions-trigger-emulator e functions-package aprovados; unit-tests teve 162/163 aprovações porque um teste antigo esperava `/Invalid/`, enquanto o validador endurecido corretamente retorna `Missing incomplete blocker`. Atualizada somente a expectativa desse teste, preservando a rejeição de relatório incompleto. Commit `3aa6974`. Firestore Rules continua bloqueado por lacunas V1. Novo CI pendente; sem deploy ou merge.
+
+## Relatório agregado com dados fictícios no Firestore Emulator — 18/10/2026
+CI #816 estava em andamento na consulta (functions-package aprovado). Acrescentado teste em `tests/v1-retirement-audit-local-firestore.test.mjs` que cria sessão V1 ativa fictícia no Firestore Emulator e exige relatório `readOnly:true`, `readyForReview:false`, bloqueio `v1-active-sessions` e ausência de UID/ID da sessão no JSON; valida também uma única enumeração de Auth simulada. Commit `975e6f9`. Esse teste não usa Auth real e não é consulta de produção; CI novo pendente, sem deploy ou merge.
