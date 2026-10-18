@@ -278,7 +278,9 @@ export function initSessionUI(getDay){
   if(!Number.isFinite(minutes)||minutes<0||minutes>10){alert('Escolha entre 0 e 10 minutos.');return;}
   try{
    const next=startSession({day:getDay(),restSeconds:Math.round(minutes*60)});
+   const pilotRequested=new URLSearchParams(location.search).get('nexorV2StartPilot')==='1';
    const pilot=v2PilotEnabled();
+   if(pilotRequested&&!pilot){alert('Piloto V2 indisponível sem conexão ou autenticação válida. Nenhuma sessão V1 será criada.');return;}
    if(pilot&&uid&&auth.currentUser?.uid===uid){
     saving=true;render();
     try{
