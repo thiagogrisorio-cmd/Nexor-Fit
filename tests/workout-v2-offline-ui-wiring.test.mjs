@@ -98,3 +98,9 @@ test('offline focus reload preserves authenticated hydrated V2 workout',()=>{
  assert.match(ui,/async function load\(\)\{[\s\S]*?if\(!navigator\.onLine&&v2ReadOnly&&session\?\.status==='active'&&uid&&uid===auth\.currentUser\?\.uid\)\{/);
  assert.match(ui,/Treino V2 offline\. Edições exigem revisões previamente carregadas/);
 });
+
+test('offline V2 controls require a baseline for the active session and exercise',()=>{
+ assert.match(ui,/session\.sets\.some\(\(_,i\)=>v2ExerciseBaselines\.has\(v2BaselineKey\(uid,session\.id,i\)\)\)/);
+ assert.match(ui,/!navigator\.onLine&&!v2ExerciseBaselines\.has\(v2BaselineKey\(uid,session\.id,i\)\)/);
+ assert.doesNotMatch(ui,/navigator\.onLine\|\|v2ExerciseBaselines\.size>0/);
+});
