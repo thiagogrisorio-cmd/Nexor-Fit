@@ -109,3 +109,7 @@ test('V2 set render cache invalidates on connectivity and per-exercise baseline 
  assert.match(ui,/const offlineBaselineIndexes=v2ReadOnly&&uid\?session\.sets\.map\(\(_,i\)=>v2ExerciseBaselines\.has\(v2BaselineKey\(uid,session\.id,i\)\)\):\[\]/);
  assert.match(ui,/const setKey=JSON\.stringify\(\[session\.id,session\.sets,saving,offlineSaving,v2ReadOnly,pilotEdit,legacyBlocked,navigator\.onLine,offlineBaselineIndexes\]\)/);
 });
+
+test('successful online V2 edit invalidates the prior offline revision baseline',()=>{
+ assert.match(ui,/await updateV2Set\(\{db,uid:account,sessionId:id,exerciseIndex,setIndex[\s\S]*?\}\);\s*\/\/ The old revision cannot authorize an offline edit after this online write\.\s*v2ExerciseBaselines\.delete\(v2BaselineKey\(account,id,exerciseIndex\)\)/);
+});
