@@ -182,3 +182,6 @@ CI #830: unit-tests, functions-package, functions-emulator e functions-trigger-e
 
 ## Bloqueios coerentes com contagens — 18/10/2026
 CI #836: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules permanece reprovado. O validador agregado agora rejeita bloqueios de V1 ativa, schema desconhecido e proprietários órfãos quando suas contagens são zero; também rejeita marcadores de auditoria incompleta quando `complete:true`. Mantém bloqueio obrigatório quando contagens são positivas e permite incompletude verdadeira. Commits `7f8e8dc` e `ee6f448`. CI dos novos commits ainda pendente; sem deploy ou merge.
+
+## Limites coerentes para proprietários órfãos — 18/10/2026
+CI #842: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules reprovado. Validador e gerador do relatório agora exigem `orphanOwners <= ownersScanned <= sessionDocuments`, além das verificações existentes. Testes unitários cobrem rejeições nas duas camadas e um cenário válido. Commits `1767611`, `be08362`, `44dc648`, `cb2cad2`. Novo CI ainda não verificado; sem deploy ou merge.
