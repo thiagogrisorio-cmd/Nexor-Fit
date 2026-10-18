@@ -1,7 +1,8 @@
 // Read-only export of retired V1 operations, scoped to the signed-in account.
 // No queue mutation, Firestore write, or automatic V1-to-V2 replay occurs here.
 import {pendingOfflineOperations,readOfflineWorkout} from './offline-controller.js';
-export async function buildLegacyV1RecoveryExport({uid,getCurrentUid=()=>uid,exportedAt=new Date().toISOString()}){
+export async function buildLegacyV1RecoveryExport({uid,getCurrentUid,exportedAt=new Date().toISOString()}){
+ if(typeof getCurrentUid!=='function')throw Error('Verificação de conta obrigatória');
  if(!uid||uid!==getCurrentUid())throw Error('Conta alterada; exportação cancelada');
  const operations=await pendingOfflineOperations(uid);
  if(uid!==getCurrentUid())throw Error('Conta alterada; exportação cancelada');
