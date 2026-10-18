@@ -1,6 +1,6 @@
 import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
 import {loadWorkoutForUI} from './session-ui-loader.js';
-import {listPendingV2Edits} from './offline-v2-queue.js';
+import {listPendingV2Edits,queueV2SetEdit} from './offline-v2-queue.js';
 import {canUseV2WorkoutPilot} from './workout-v2-rollout-policy.js';
 import {createV2Workout,updateV2Set} from './session-v2-repository.js';
 import {finishV2Workout} from './session-v2-finish.js';
@@ -18,6 +18,34 @@ let v2Notice='';
 let v2ReadOnly=false;
 let v2LoadToken=0;
 let v2PendingCount=0;
+const v2ExerciseBaselines=new Map();
+const v2BaselineKey=(account,id,index)=>account+':'+id+':'+index;
+async function primeV2OfflineBaselines(account,id){
+ if(!navigator.onLine)return;
+ const rows=await Promise.all(Array.from({length:12},(_,index)=>getDoc(doc(db,'users',account,'sessions',id,'exercises',String(index)))));
+ if(uid!==account||auth.currentUser?.uid!==account||session?.id!==id)return;
+ for(let index=0;index<12;index++){
+  const snap=rows[index],row=snap.exists()?snap.data():null;
+  if(row?.index!==index||row?.sessionId!==id||!Number.isInteger(row.revision)||row.revision<0||!Array.isArray(row.sets)||row.sets.length!==2)continue;
+  v2ExerciseBaselines.set(v2BaselineKey(account,id,index),{revision:row.revision,sets:row.sets.map(set=>({...set}))});
+ }
+}
+async function queueOfflineV2PilotSet(exerciseIndex,setIndex){
+ const account=uid,id=session?.id;
+ if(!v2PilotEnabledOffline()||!v2ReadOnly||!account||auth.currentUser?.uid!==account||!id||navigator.onLine)throw Error('Edição V2 offline indisponível');
+ const baseline=v2ExerciseBaselines.get(v2BaselineKey(account,id,exerciseIndex));
+ const set=baseline?.sets?.[setIndex];
+ if(!baseline||!set||typeof set.done!=='boolean'||(set.completedAt!==null&&typeof set.completedAt!=='string'))throw Error('Abra este treino online antes de editar offline');
+ const pending=await listPendingV2Edits(account);
+ if(pending.some(item=>item.sessionId===id&&item.exerciseIndex===exerciseIndex))throw Error('Há edição pendente neste exercício; sincronize antes de continuar');
+ const desired=!session.sets[exerciseIndex][setIndex].done;
+ await queueV2SetEdit({uid:account,id:globalThis.crypto?.randomUUID?.()||String(Date.now())+'-'+exerciseIndex+'-'+setIndex,sessionId:id,exerciseIndex,setIndex,done:desired,baseRevision:baseline.revision,baseCompletedAt:set.completedAt});
+ if(uid!==account||session?.id!==id)return;
+ session={...session,sets:session.sets.map((row,i)=>i===exerciseIndex?row.map((value,j)=>j===setIndex?{...value,done:desired}:value):row)};
+ window.dispatchEvent(new Event('nexor-v2-queue-changed'));
+ render();
+}
+
 async function refreshV2PendingCount(){
  const account=uid;
  if(!account){v2PendingCount=0;render();return;}
@@ -28,6 +56,7 @@ async function refreshV2PendingCount(){
   render();
  }catch(error){console.warn('Nexor V2 pending status:',error);}
 }
+const v2PilotEnabledOffline=()=>new URLSearchParams(location.search).get('nexorV2StartPilot')==='1'&&!!uid&&uid===auth.currentUser?.uid;
 const v2PilotEnabled=()=>canUseV2WorkoutPilot({search:location.search,uid,currentUid:auth.currentUser?.uid,online:navigator.onLine});
 async function editV2PilotSet(exerciseIndex,setIndex){
  if(!v2PilotEnabled()||!v2ReadOnly||!uid||auth.currentUser?.uid!==uid||!navigator.onLine||!session?.id)throw Error('Edição V2 indisponível');
@@ -232,7 +261,7 @@ function render(){
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
  const rest=remainingRest(session);$('sessionRest').textContent=rest?restfmt(rest):'Pronto para a próxima série';
- const pilotEdit=v2ReadOnly&&v2PilotEnabled()&&!!uid&&navigator.onLine;
+ const pilotEdit=v2ReadOnly&&v2PilotEnabledOffline()&&!!uid&&(navigator.onLine||v2ExerciseBaselines.size>0);
  const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving,v2ReadOnly,pilotEdit]);
  if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||(v2ReadOnly&&!pilotEdit)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
  $('finishSession').disabled=saving||offlineSaving||(v2ReadOnly&&!(v2PilotEnabled()&&!!uid&&navigator.onLine));
