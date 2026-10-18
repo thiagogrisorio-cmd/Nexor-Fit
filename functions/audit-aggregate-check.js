@@ -13,6 +13,6 @@ export function assertAggregateReport(report){
  const has=code=>report.blockers.includes(code);
  if((report.counts.v1Active>0&&!has('v1-active-sessions'))||(report.counts.unknown>0&&!has('unknown-session-schema'))||(report.orphanAudit.orphanOwners>0&&!has('orphan-session-owners')))throw Error('Missing required blockers');
  if(!report.complete&&!has('inventory-incomplete')&&!has('orphan-audit-incomplete'))throw Error('Missing incomplete blocker');
- if(report.readyForReview&&(!report.complete||report.blockers.length))throw Error('Invalid readiness');
+ if(report.readyForReview!==(report.complete&&report.blockers.length===0))throw Error('Invalid readiness');
  return report;
 }
