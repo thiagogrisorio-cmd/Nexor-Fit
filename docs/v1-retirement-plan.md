@@ -110,3 +110,6 @@ Criado `v1-retirement-audit-access.js` com regra de negação por padrão: somen
 
 ## Handler HTTP administrativo (não exposto)
 Criado `functions/audit-report-handler.js`, handler injetável com POST obrigatório, Bearer token, verificação de token, autorização no servidor e relatório gerado apenas após autorização. Retorna 401/403/405/503 sem expor erros internos. Testes unitários garantem que requisições não autorizadas não executam o relatório. **Ainda não há endpoint exportado no functions/index.js, nem verificação real Firebase Admin ou ligação ao inventário.** A implementação é um componente preparatório, não serviço acessível; produção permanece bloqueada. CI #678 estava na fila; novos commits pendentes.
+
+## Firebase Admin Auth no handler de emulador
+CI #686: quatro jobs aprovados, Firestore Rules continua falhando nos testes V1. Criado `functions/audit-report-emulator-service.js` para verificar ID token com `verifyIdToken(token,true)`, consultar conta atual via `getUser`, negar usuários desabilitados, sem e-mail verificado ou fora da allowlist e só então executar gerador de relatório injetado. Testes usam mocks de Admin Auth e verificam que acessos negados não geram relatórios. **Não é um endpoint exportado, não há conexão ainda ao inventário e não foi feito teste end-to-end com Auth Emulator.** CI novo pendente; sem deploy.
