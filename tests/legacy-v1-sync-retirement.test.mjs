@@ -25,7 +25,8 @@ test('V1 recovery export is read-only and account-scoped',()=>{
  const status=readFileSync(new URL('../offline-status.js',import.meta.url),'utf8');
  assert.match(recovery,/pendingOfflineOperations\(uid\)/);
  assert.match(recovery,/readOfflineWorkout\(uid,sessionId\)/);
- assert.match(recovery,/uid!==currentUid/);
+ assert.match(recovery,/uid!==getCurrentUid\(\)/);
+ assert.match(status,/getCurrentUid:\(\)=>auth\.currentUser\?\.uid/);
  assert.doesNotMatch(recovery,/removeOfflineOperation|runTransaction|setDoc|updateDoc/);
  assert.match(status,/buildLegacyV1RecoveryExport/);
  assert.match(status,/Exportar recuperação V1/);
