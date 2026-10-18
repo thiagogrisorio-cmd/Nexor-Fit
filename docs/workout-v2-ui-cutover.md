@@ -19,3 +19,6 @@ Levantamento do código em `session-ui.js` na branch de trabalho. **Não é auto
 
 ## Critério de aceite da virada
 Criação, edição, conclusão, histórico, sincronização e recuperação V2 operam sem `nexorV2StartPilot`; V1 é somente leitura/migração; todas as regras e testes passam; rollback foi ensaiado.
+
+## Integração inicial do replay offline V2 (somente piloto)
+CI #885: unit-tests, functions-package, functions-emulator e functions-trigger-emulator aprovados; firestore-rules segue reprovado. Em `index.html`, o piloto explícito `?nexorV2StartPilot=1` agora carrega `startV2OfflineIntegration`, que liga a fila V2 já existente ao ciclo de autenticação, reconexão e retomada. A rotina é restrita a esse piloto, registra conflitos sem descartá-los e não altera a inicialização padrão. **Ainda não existe enfileiramento de edições V2 pela interface quando offline**, nem conclusão offline V2; não declarar suporte offline completo ou produção pronta. Commit `a5661af`; novo CI pendente. Sem deploy ou merge.
