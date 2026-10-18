@@ -170,3 +170,6 @@ CI #812: functions-emulator, functions-trigger-emulator e functions-package apro
 
 ## Relatório agregado com dados fictícios no Firestore Emulator — 18/10/2026
 CI #816 estava em andamento na consulta (functions-package aprovado). Acrescentado teste em `tests/v1-retirement-audit-local-firestore.test.mjs` que cria sessão V1 ativa fictícia no Firestore Emulator e exige relatório `readOnly:true`, `readyForReview:false`, bloqueio `v1-active-sessions` e ausência de UID/ID da sessão no JSON; valida também uma única enumeração de Auth simulada. Commit `975e6f9`. Esse teste não usa Auth real e não é consulta de produção; CI novo pendente, sem deploy ou merge.
+
+## Paginação incompleta de Auth bloqueia prontidão — 18/10/2026
+Adicionado teste de integração com serviços simulados em `tests/v1-retirement-audit-assembly-blockers.test.mjs`: dez páginas Auth consecutivas com cursor de continuação excedem o limite de descoberta; o relatório agregado deve marcar `complete:false`, `readyForReview:false` e `inventory-incomplete`, sem expor cursor. Commit `6590d23`. CI #820 estava em execução na consulta (functions-package aprovado); validação do novo commit ainda pendente. Nenhum deploy ou merge.
