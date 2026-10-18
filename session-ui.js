@@ -26,6 +26,8 @@ async function primeV2OfflineBaselines(account,id){
  if(!navigator.onLine)return;
  const rows=await Promise.all(Array.from({length:12},(_,index)=>getDoc(doc(db,'users',account,'sessions',id,'exercises',String(index)))));
  if(uid!==account||auth.currentUser?.uid!==account||session?.id!==id)return;
+ // Replace the entire snapshot: a missing or malformed row must never retain an older revision.
+ for(let index=0;index<12;index++)v2ExerciseBaselines.delete(v2BaselineKey(account,id,index));
  for(let index=0;index<12;index++){
   const snap=rows[index],row=snap.exists()?snap.data():null;
   if(row?.index!==index||row?.sessionId!==id||!Number.isInteger(row.revision)||row.revision<0||!Array.isArray(row.sets)||row.sets.length!==2)continue;
