@@ -30,3 +30,8 @@ test('V2 pilot blocks all legacy V1 write paths but retains legacy reads',()=>{
 test('V2 offline edit rechecks owner and session after pending lookup',()=>{
  assert.match(ui,/if\(uid!==account\|\|auth\.currentUser\?\.uid!==account\|\|session\?\.id!==id\|\|navigator\.onLine\)throw Error/);
 });
+
+test('V2 sessions cannot be replaced by V1 offline cache during hydration',()=>{
+ assert.match(ui,/if\(accountUid&&!v2ReadOnly\)\{\s*const cachedId/);
+ assert.match(ui,/if\(accountUid&&session\?\.status==='active'&&!v2ReadOnly\)await cacheOnlineWorkout/);
+});
