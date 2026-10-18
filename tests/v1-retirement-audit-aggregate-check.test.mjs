@@ -22,3 +22,11 @@ test('rejects reports concealing mandatory risk blockers',()=>{
  assert.throws(()=>assertAggregateReport({...base,complete:false,readyForReview:false}),/Missing incomplete blocker/);
  assert.equal(assertAggregateReport({...base,counts:{...base.counts,total:1,v1Active:1},blockers:['v1-active-sessions'],readyForReview:false}).readOnly,true);
 });
+
+test('readiness must exactly match completeness and absence of blockers',()=>{
+ const base=valid();
+ assert.throws(()=>assertAggregateReport({...base,readyForReview:false}),/Invalid readiness/);
+ assert.throws(()=>assertAggregateReport({...base,blockers:['invalid-session-paths'],readyForReview:true}),/Invalid readiness/);
+ assert.equal(assertAggregateReport({...base,blockers:['invalid-session-paths'],readyForReview:false}).readyForReview,false);
+ assert.equal(assertAggregateReport({...base,complete:false,blockers:['inventory-incomplete'],readyForReview:false}).readyForReview,false);
+});
