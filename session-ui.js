@@ -19,6 +19,7 @@ let v2Notice='';
 let v2ReadOnly=false;
 let v2LoadToken=0;
 let v2PendingCount=0;
+let legacySnapshotReloadInFlight=false;
 const v2ExerciseBaselines=new Map();
 const v2BaselineKey=(account,id,index)=>account+':'+id+':'+index;
 async function primeV2OfflineBaselines(account,id){
@@ -112,7 +113,11 @@ function applyRemoteSession(snapshot,accountUid){
   v2Notice='Treino legado detectado. Migração V2 necessária antes de editar.';
   session=null;
   render();
-  if(navigator.onLine)load().catch(error=>console.warn('Nexor V1 migration load:',error));
+  if(navigator.onLine&&!legacySnapshotReloadInFlight){
+   legacySnapshotReloadInFlight=true;
+   load().catch(error=>console.warn('Nexor V1 migration load:',error))
+    .finally(()=>{legacySnapshotReloadInFlight=false;});
+  }
   return;
  }
   if(snapshot.exists()&&snapshot.data().schemaVersion===2){
