@@ -113,3 +113,6 @@ Criado `functions/audit-report-handler.js`, handler injetável com POST obrigat�
 
 ## Firebase Admin Auth no handler de emulador
 CI #686: quatro jobs aprovados, Firestore Rules continua falhando nos testes V1. Criado `functions/audit-report-emulator-service.js` para verificar ID token com `verifyIdToken(token,true)`, consultar conta atual via `getUser`, negar usuários desabilitados, sem e-mail verificado ou fora da allowlist e só então executar gerador de relatório injetado. Testes usam mocks de Admin Auth e verificam que acessos negados não geram relatórios. **Não é um endpoint exportado, não há conexão ainda ao inventário e não foi feito teste end-to-end com Auth Emulator.** CI novo pendente; sem deploy.
+
+## Composição de auditoria agregada
+`v1-retirement-audit-assembly.js` reúne o inventário paginado de contas Firebase Auth e a auditoria de sessões órfãs no Firestore e entrega ao gerador de relatório agregado. Teste com fontes vazias simuladas incluído no npm test. **Ainda não está conectado ao handler administrativo e não representa auditoria de produção.** Mesmo que `readyForReview` seja verdadeiro, o gate de sete critérios de aposentadoria da V1 continua obrigatório. Sem deploy.
