@@ -119,3 +119,6 @@ CI #686: quatro jobs aprovados, Firestore Rules continua falhando nos testes V1.
 
 ## Composição de endpoint protegido (ainda sem exportação)
 `functions/audit-report-protected-endpoint.js` compõe o handler HTTP e o serviço Admin Auth com gerador de relatório injetável, permitindo testes de autorização antes da leitura. Não há importação direta do módulo raiz de inventário dentro de Functions (restrição de empacotamento), nem export em `functions/index.js`; portanto **a conexão efetiva com inventário Firestore/Auth e o endpoint emulado ainda não foram concluídos**. Teste com mocks adicionado. CI #702 em andamento na consulta; sem deploy.
+
+## Provider de auditoria no backend
+Criado `functions/audit-provider.js`, compositor de fontes injetadas, e teste garantindo que nenhum scan ocorre antes da autorização do endpoint protegido. CI #710: quatro jobs aprovados e regras Firestore V1 ainda reprovadas. **Ainda não foram importadas/empacotadas as implementações reais do inventário no diretório functions**, nem criado endpoint acessível ou testes Auth+Firestore end-to-end. Sem deploy.
