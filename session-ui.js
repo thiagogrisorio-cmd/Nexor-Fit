@@ -74,6 +74,8 @@ async function editV2PilotSet(exerciseIndex,setIndex){
  if(!set||typeof set.done!=='boolean')throw Error('Série V2 inválida');
  if(account!==auth.currentUser?.uid||session?.id!==id)throw Error('Sessão alterada');
  await updateV2Set({db,uid:account,sessionId:id,exerciseIndex,setIndex,done:!set.done,expectedRevision:row.revision,expectedCompletedAt:set.completedAt,runTransaction,doc,serverTimestamp});
+ // The old revision cannot authorize an offline edit after this online write.
+ v2ExerciseBaselines.delete(v2BaselineKey(account,id,exerciseIndex));
 
 }
 
