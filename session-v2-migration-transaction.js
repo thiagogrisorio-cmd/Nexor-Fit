@@ -20,7 +20,7 @@ export async function migrateLegacySessionAtomically({db,uid,sessionId,doc,runTr
   if(!parentSnapshot.exists())throw Error('Sessão original ausente');
   const original=parentSnapshot.data();
   if(original.schemaVersion===2){
-   if(!backupSnapshot.exists()||childSnapshots.some(snapshot=>!snapshot.exists()))
+   if(childSnapshots.some(snapshot=>!snapshot.exists()))
     return {status:'conflict',sessionId,reason:'incomplete-v2-migration'};
    return {status:'already-v2',sessionId};
   }
