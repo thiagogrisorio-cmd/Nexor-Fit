@@ -60,3 +60,17 @@ test('V2 parent cannot be downgraded to legacy V1',async()=>{
  const saved=await assertSucceeds(getDoc(doc(db,'users',uid,'sessions',id)));
  assert.equal(saved.data().schemaVersion,2);
 });
+
+test('owner cannot forge a migration backup against an unrelated V2 parent',async()=>{
+ const uid='forged-backup-owner',id='forged-backup-session',db=env.authenticatedContext(uid).firestore();
+ const original=startSession({id,day:0,now:0});
+ await assertSucceeds(setDoc(doc(db,'users',uid,'sessions',id),{
+  id,day:0,status:'active',startedAt:original.startedAt,restSeconds:original.restSeconds,
+  schemaVersion:2,updatedAt:serverTimestamp()
+ }));
+ await assertFails(setDoc(doc(db,'users',uid,'sessionBackups',id),{
+  sessionId:id,original:encodeSessionForFirestore(original),createdAt:serverTimestamp()
+ }));
+ const backup=await assertSucceeds(getDoc(doc(db,'users',uid,'sessionBackups',id)));
+ assert.equal(backup.exists(),false);
+});
