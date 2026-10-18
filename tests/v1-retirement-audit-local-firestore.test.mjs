@@ -32,3 +32,24 @@ test('authorized aggregate report reads Firestore emulator; unauthorized request
   assert.equal(JSON.stringify(allowed.body).includes('audit-member'),false);
  }finally{await deleteApp(app);}
 });
+
+test('aggregate report rejects V1 active sessions and never leaks document IDs', {skip:!process.env.FIRESTORE_EMULATOR_HOST||!process.env.FIREBASE_AUTH_EMULATOR_HOST},async()=>{
+ const app=initializeApp({projectId:'demo-nexor-fit-rules-test'},'audit-risk-report-emulator-test');
+ try{
+  const db=getFirestore(app);
+  const uid='audit-risk-member',sessionId='audit-risk-session';
+  await db.doc(`users/${uid}/sessions/${sessionId}`).set({id:sessionId,status:'active',sets:[]});
+  let scanned=0;
+  const auth={verifyIdToken:async()=>({uid:'audit-risk-admin'}),getUser:async id=>({uid:id,emailVerified:true,disabled:false}),listUsers:async()=>{scanned++;return {users:[{uid}]};}};
+  const result=response();
+  await createLocalAuditEndpoint({adminAuth:auth,db,allowedUids:['audit-risk-admin']})({method:'POST',headers:{authorization:'Bearer emulator-only'}},result);
+  assert.equal(result.code,200);
+  assert.equal(result.body.readOnly,true);
+  assert.equal(result.body.readyForReview,false);
+  assert.ok(result.body.counts.v1Active>=1);
+  assert.ok(result.body.blockers.includes('v1-active-sessions'));
+  assert.equal(JSON.stringify(result.body).includes(uid),false);
+  assert.equal(JSON.stringify(result.body).includes(sessionId),false);
+  assert.equal(scanned,1);
+ }finally{await deleteApp(app);}
+});
