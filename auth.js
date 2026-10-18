@@ -1,8 +1,17 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import { firebaseConfig } from './firebase-config.js';
+import {connectAuthEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+import {getFirestore,connectFirestoreEmulator} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+// Explicit local-only smoke-test mode; never connect production domains to emulators.
+const localHost=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
+export const usingLocalEmulators=localHost&&new URLSearchParams(location.search).get('nexorEmulators')==='1';
+if(usingLocalEmulators){
+ connectAuthEmulator(auth,'http://127.0.0.1:9099',{disableWarnings:true});
+ connectFirestoreEmulator(getFirestore(app),'127.0.0.1',8080);
+}
 auth.languageCode = 'pt-BR';
 const el = id => document.getElementById(id);
 const errors = {
