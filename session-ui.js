@@ -22,6 +22,23 @@ let v2PendingCount=0;
 let legacySnapshotReloadInFlight=false;
 const v2ExerciseBaselines=new Map();
 const weightDrafts=new Map();
+const previousWeights=new Map();
+const weightFeedback=new Map();
+async function loadPreviousWeights(account,day,currentSessionId){
+ if(!navigator.onLine||!account)return;
+ const rows=await getDocs(collection(db,'users',account,'sessions'));
+ if(uid!==account||auth.currentUser?.uid!==account)return;
+ const previous=rows.docs.filter(row=>row.id!==currentSessionId&&row.data().schemaVersion===2&&row.data().status==='completed'&&row.data().day===day).sort((a,b)=>String(b.data().endedAt||'').localeCompare(String(a.data().endedAt||'')))[0];
+ const snapshots=previous?await Promise.all(Array.from({length:12},(_,i)=>getDoc(doc(db,'users',account,'sessions',previous.id,'exercises',String(i))))):[];
+ if(uid!==account||auth.currentUser?.uid!==account||session?.id!==currentSessionId)return;
+ previousWeights.clear();
+ snapshots.forEach((snap,i)=>{
+  if(!snap.exists()||snap.data().index!==i||snap.data().sessionId!==previous.id)return;
+  snap.data().sets?.forEach((set,j)=>{if(set.done&&typeof set.weightKg==='number')previousWeights.set(weightKey(currentSessionId,i,j),set.weightKg);});
+ });
+ renderedSetKey='';render();
+}
+
 const weightKey=(id,i,j)=>id+':'+i+':'+j;
 const v2BaselineKey=(account,id,index)=>account+':'+id+':'+index;
 async function primeV2OfflineBaselines(account,id){
@@ -82,6 +99,8 @@ async function editV2PilotSet(exerciseIndex,setIndex){
  if(weightKg!==undefined&&(!Number.isFinite(weightKg)||weightKg<0||weightKg>2000))throw Error('Carga inválida: informe entre 0 e 2000 kg');
  await updateV2Set({db,uid:account,sessionId:id,exerciseIndex,setIndex,done:!set.done,weightKg,expectedRevision:row.revision,expectedCompletedAt:set.completedAt,runTransaction,doc,serverTimestamp});
  weightDrafts.delete(weightKey(id,exerciseIndex,setIndex));
+ const previous=previousWeights.get(weightKey(id,exerciseIndex,setIndex));
+ if(!set.done&&weightKg!==undefined&&previous!==undefined&&weightKg>previous)weightFeedback.set(weightKey(id,exerciseIndex,setIndex),'Parabéns, sua carga aumentou');
  // The old revision cannot authorize an offline edit after this online write.
  v2ExerciseBaselines.delete(v2BaselineKey(account,id,exerciseIndex));
 
@@ -164,7 +183,7 @@ function applyRemoteSession(snapshot,accountUid){
     render();return;
    }
    session=result.status==='ready'&&result.session.status==='active'?result.session:null;
-   if(session&&v2PilotEnabled())primeV2OfflineBaselines(accountUid,snapshot.id).catch(console.warn);
+   if(session&&v2PilotEnabled()){primeV2OfflineBaselines(accountUid,snapshot.id).catch(console.warn);loadPreviousWeights(accountUid,session.day,snapshot.id).catch(console.warn);}
    render();
   }).catch(error=>{if(token!==v2LoadToken||uid!==accountUid)return;console.error('Nexor V2:',error);v2Notice='Não foi possível carregar o treino V2 com segurança.';render();});
   return;
@@ -391,7 +410,7 @@ function render(){
    const subtitle=typeof details==='string'?'':details.group+' · '+sets.length+' séries · '+details.reps+' repetições';
    const demoUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(title+' execução correta musculação');
    const safe=text=>String(text).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[char]));
-   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button><label class="set-weight">Carga série '+(j+1)+' (kg)<span class="weight-controls"><button type="button" data-weight-minus="'+i+'-'+j+'" aria-label="Diminuir carga">−</button><input type="number" min="0" max="2000" step="0.5" inputmode="decimal" data-set-weight="'+i+'-'+j+'" value="'+safe(weightDrafts.get(weightKey(session.id,i,j))??set.weightKg??'')+'" placeholder="Opcional"><button type="button" data-weight-plus="'+i+'-'+j+'" aria-label="Aumentar carga">+</button></span></label>').join('')+'</div><div class="session-exercise-tools"><a class="btn outline small" target="_blank" rel="noopener noreferrer" href="'+demoUrl+'">▶ Demonstração</a></div><p class="exercise-rest" data-rest-exercise="'+i+'" role="timer" aria-label="Descanso do exercício" hidden></p></article>';
+   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button><label class="set-weight">Carga série '+(j+1)+' (kg)<span class="weight-controls"><button type="button" data-weight-minus="'+i+'-'+j+'" aria-label="Diminuir carga">−</button><input type="number" min="0" max="2000" step="0.5" inputmode="decimal" data-set-weight="'+i+'-'+j+'" value="'+safe(weightDrafts.get(weightKey(session.id,i,j))??set.weightKg??'')+'" placeholder="Opcional"><button type="button" data-weight-plus="'+i+'-'+j+'" aria-label="Aumentar carga">+</button></span><small>Última vez: '+(previousWeights.has(weightKey(session.id,i,j))?safe(previousWeights.get(weightKey(session.id,i,j)))+' kg':'sem registro')+'</small>'+(weightFeedback.get(weightKey(session.id,i,j))?'<small class="weight-feedback">Parabéns, sua carga aumentou</small>':'')+'</label>').join('')+'</div><div class="session-exercise-tools"><a class="btn outline small" target="_blank" rel="noopener noreferrer" href="'+demoUrl+'">▶ Demonstração</a></div><p class="exercise-rest" data-rest-exercise="'+i+'" role="timer" aria-label="Descanso do exercício" hidden></p></article>';
   };
   const pending=exercises.filter(row=>!row.complete),done=exercises.filter(row=>row.complete);
   $('sessionSetList').innerHTML='<h3>Exercícios em andamento ('+pending.length+')</h3>'+pending.map(buildExercise).join('')+(done.length?'<h3 class="section">Exercícios concluídos ('+done.length+')</h3>'+done.map(buildExercise).join(''):'');
@@ -467,6 +486,7 @@ export function initSessionUI(getDay){
   uid=accountUid;
   v2PendingCount=0;
   v2ExerciseBaselines.clear();
+  previousWeights.clear();weightFeedback.clear();weightDrafts.clear();
   refreshV2PendingCount();
   watchControl(accountUid);
   load();
