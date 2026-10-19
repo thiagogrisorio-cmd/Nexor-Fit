@@ -1,13 +1,11 @@
 import {planWorkoutPublication} from './workout-plan-publish.js';
 
 /**
- * Trusted-backend-only transaction adapter. Never expose privileged credentials
- * or invoke this from a browser. Caller must read/verify manifest and all
- * children from the same immutable revision before calling.
+ * Trusted-backend-only transaction adapter. Reads all children inside the
+ * transaction before writing the published pointer. Not wired to production.
  */
 export async function publishWorkoutRevisionTransaction({
- db,uid,planId,revision,manifest,exerciseDocuments,expectedPublishedRevision,
- runTransaction,doc,serverTimestamp
+ db,uid,planId,revision,expectedPublishedRevision,runTransaction,doc,serverTimestamp
 }){
  if(!uid||!planId||!Number.isInteger(revision)||revision<1)
   throw new Error('Invalid publication identity');
@@ -19,16 +17,23 @@ export async function publishWorkoutRevisionTransaction({
   const planSnap=await tx.get(planRef);
   const revisionSnap=await tx.get(revisionRef);
   if(!planSnap.exists()||!revisionSnap.exists())throw new Error('Publication conflict: missing document');
-  const storedManifest=revisionSnap.data();
-  if(storedManifest.status!=='draft'||storedManifest.planId!==planId||storedManifest.revision!==revision)
+  const manifest=revisionSnap.data();
+  if(manifest.status!=='draft'||manifest.planId!==planId||manifest.revision!==revision)
    throw new Error('Publication conflict: invalid stored revision');
-  // The caller's complete manifest must be identical to the stored manifest
-  // (ignoring server-managed updatedAt). This is not a substitute for reading
-  // child docs inside the transaction; production activation is prohibited.
-  for(const key of ['planId','revision','status','name','origin','exerciseIds']){
-   if(JSON.stringify(storedManifest[key])!==JSON.stringify(manifest?.[key]))
-    throw new Error('Publication conflict: manifest changed');
-  }
+  if(!Array.isArray(manifest.exerciseIds)||manifest.exerciseIds.length<1||manifest.exerciseIds.length>100)
+   throw new Error('Publication conflict: invalid manifest exercise list');
+  if(new Set(manifest.exerciseIds).size!==manifest.exerciseIds.length)
+   throw new Error('Publication conflict: duplicate exercise IDs');
+  const childRefs=manifest.exerciseIds.map(id=>{
+   if(typeof id!=='string'||!id.trim()||id.includes('/'))
+    throw new Error('Publication conflict: invalid child ID');
+   return doc(db,'users',uid,'workoutPlans',planId,'revisions',String(revision),'exercises',id);
+  });
+  // Firestore requires all reads to precede writes. Reading children here also
+  // makes concurrent child edits conflict with this transaction.
+  const childSnapshots=await Promise.all(childRefs.map(ref=>tx.get(ref)));
+  if(childSnapshots.some(s=>!s.exists()))throw new Error('Publication conflict: missing exercise');
+  const exerciseDocuments=childSnapshots.map(s=>s.data());
   const result=planWorkoutPublication({
    planId,revision,manifest,exerciseDocuments,
    planRecord:planSnap.data(),expectedPublishedRevision
