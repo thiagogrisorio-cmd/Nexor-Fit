@@ -39,3 +39,15 @@ test('partial workout keeps accurate duration and set count',()=>{
  assert.equal(sessionProgress(c).total,24);
  assert.equal(c.restUntil,null);
 });
+
+test('legacy set toggle preserves optional weight and never mutates the original session',async()=>{
+ const {startSession,markSet}=await import('../workout-session.js');
+ const initial=startSession({id:'weight-preservation',day:0,now:0});
+ initial.sets[0][0].weightKg=25;
+ const done=markSet(initial,0,0,true,1000);
+ assert.equal(done.sets[0][0].weightKg,25);
+ assert.equal(initial.sets[0][0].done,false);
+ const undone=markSet(done,0,0,false,2000);
+ assert.equal(undone.sets[0][0].weightKg,25);
+ assert.equal(undone.sets[0][0].completedAt,null);
+});
