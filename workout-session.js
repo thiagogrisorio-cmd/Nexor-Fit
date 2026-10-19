@@ -10,7 +10,7 @@ export function markSet(session,exercise,set,done=true,now=Date.now()){
  if(session.status!=='active')throw Error('Sessão não está ativa');
  if(!session.sets[exercise]?.[set])throw Error('Série inválida');
  const next=structuredClone(session);
- next.sets[exercise][set]={done:!!done,completedAt:done?new Date(now).toISOString():null};
+ next.sets[exercise][set]={...next.sets[exercise][set],done:!!done,completedAt:done?new Date(now).toISOString():null};
  next.restUntil=done&&next.restSeconds>0?new Date(now+next.restSeconds*1000).toISOString():null;
  return next;
 }
