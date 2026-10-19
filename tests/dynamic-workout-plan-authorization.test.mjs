@@ -45,9 +45,9 @@ test('experimental plan fixture does not authorize dynamic sessions',async()=>{
 test('experimental fixture accepts two distinct exercises and rejects three',async()=>{
  const exercises=Array.from({length:2},(_,i)=>({...ex,id:'exercise-'+i,order:i}));
  const ref=doc(db('alice'),'users/alice/workoutPlans/plan-two');
- await assertSucceeds(setDoc(ref,{...plan,id:'plan-twelve',exercises}));
+ await assertSucceeds(setDoc(ref,{...plan,id:'plan-two',exercises}));
  await assertFails(setDoc(doc(db('alice'),'users/alice/workoutPlans/plan-three'),{
-  ...plan,id:'plan-thirteen',exercises:[...exercises,{...ex,id:'exercise-2',order:2}]
+  ...plan,id:'plan-three',exercises:[...exercises,{...ex,id:'exercise-2',order:2}]
  }));
 });
 test('experimental fixture rejects duplicate exercise ids in a larger plan',async()=>{
