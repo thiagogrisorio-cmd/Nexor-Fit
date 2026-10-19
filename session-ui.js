@@ -427,11 +427,19 @@ export function initSessionUI(getDay){
    }else throw Error('Início V1 desativado; faça login e conecte-se para iniciar V2');
   }catch(e){console.error('Nexor start:',e);$('sessionMessage').textContent='Falha ao iniciar sessão V2: '+(e?.code||e?.message||'erro desconhecido')+'. Consulte o console (F12) para detalhes.';alert('Não foi possível iniciar o treino V2. Veja o diagnóstico abaixo do botão.');}
  };
+ $('sessionSetList').addEventListener('input',event=>{
+  const input=event.target.closest('[data-set-weight]');if(!input||!session?.id)return;
+  const [i,j]=input.dataset.setWeight.split('-').map(Number);
+  weightDrafts.set(weightKey(session.id,i,j),input.value);
+ });
  $('sessionSetList').onclick=async event=>{
+  const minus=event.target.closest('[data-weight-minus]');
+  const plus=event.target.closest('[data-weight-plus]');
+  if(minus||plus){adjustWeightDraft(minus||plus,plus?0.5:-0.5);return;}
   const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving)return;
   const [i,j]=button.dataset.set.split('-').map(Number);
   if(!v2ReadOnly&&v2PilotRequested()){alert('Treino V1 preservado para leitura. Migração para V2 necessária antes de editar.');return;}
-  if(v2ReadOnly){const wasOffline=!navigator.onLine;try{saving=true;render();if(wasOffline)await queueOfflineV2PilotSet(i,j);else await editV2PilotSet(i,j);}catch(e){console.error('V2 set:',e);alert('Não foi possível atualizar a série V2. Abra o treino online antes de editar offline ou sincronize as pendências.');}finally{saving=false;if(!wasOffline)await load();render();}return;}
+  if(v2ReadOnly){const wasOffline=!navigator.onLine;if(wasOffline&&weightDrafts.has(weightKey(session.id,i,j))){alert('Para salvar a carga desta série, conecte-se à internet. A marcação offline não inclui o peso.');return;}try{saving=true;render();if(wasOffline)await queueOfflineV2PilotSet(i,j);else await editV2PilotSet(i,j);}catch(e){console.error('V2 set:',e);alert('Não foi possível atualizar a série V2. Abra o treino online antes de editar offline ou sincronize as pendências.');}finally{saving=false;if(!wasOffline)await load();render();}return;}
   try{if(await offlineEdit('mark-set',i,j,!session.sets[i][j].done))return;await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
