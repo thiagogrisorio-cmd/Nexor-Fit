@@ -49,7 +49,8 @@ service cloud.firestore {
 
     function validSetEntry(s) {
       return s is map && s.keys().hasAll(['done','completedAt'])
-        && s.keys().hasOnly(['done','completedAt'])
+        && s.keys().hasOnly(['done','completedAt','weightKg'])
+        && (!s.keys().hasAny(['weightKg']) || (s.weightKg is number && s.weightKg >= 0 && s.weightKg <= 2000))
         && s.done is bool
         && (s.completedAt == null || (s.completedAt is string && s.completedAt.size() <= 32));
     }
