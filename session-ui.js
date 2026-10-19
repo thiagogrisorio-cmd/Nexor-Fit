@@ -357,6 +357,11 @@ function render(){
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
+ // Progress follows the V2 session, not the retired per-exercise V1 checkboxes.
+ const completeExercises=session.sets.filter(sets=>sets.every(set=>set.done)&&exerciseRestSeconds(sets,session.restSeconds)===0).length;
+ const percent=Math.round(completeExercises/session.sets.length*100);
+ $('progressPct').textContent=percent+'%';$('progressBar').style.width=percent+'%';
+ $('progressCount').textContent=completeExercises+' de '+session.sets.length+' exercícios concluídos';
  // Rest belongs to the exercise whose set was marked done, not to the whole workout.
  $('sessionRest').textContent='O descanso de cada exercício aparece no próprio cartão.';
  const legacyBlocked=!v2ReadOnly&&v2PilotRequested();
@@ -371,8 +376,9 @@ function render(){
    const details=workoutExerciseLabel(session.day,i);
    const title=typeof details==='string'?details:details.name;
    const subtitle=typeof details==='string'?'':details.group+' · '+sets.length+' séries · '+details.reps+' repetições';
+   const demoUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(title+' execução correta musculação');
    const safe=text=>String(text).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[char]));
-   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button>').join('')+'</div><p class="exercise-rest" data-rest-exercise="'+i+'" role="timer" aria-label="Descanso do exercício" hidden></p></article>';
+   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button>').join('')+'</div><div class="session-exercise-tools"><a class="btn outline small" target="_blank" rel="noopener noreferrer" href="'+demoUrl+'">▶ Demonstração</a></div><p class="exercise-rest" data-rest-exercise="'+i+'" role="timer" aria-label="Descanso do exercício" hidden></p></article>';
   };
   const pending=exercises.filter(row=>!row.complete),done=exercises.filter(row=>row.complete);
   $('sessionSetList').innerHTML='<h3>Exercícios em andamento ('+pending.length+')</h3>'+pending.map(buildExercise).join('')+(done.length?'<h3 class="section">Exercícios concluídos ('+done.length+')</h3>'+done.map(buildExercise).join(''):'');
