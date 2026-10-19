@@ -64,3 +64,32 @@ test('real emulator transaction rejects stale pointer without changing revision'
   assert.equal((await getDoc(revision)).data().status,'draft');
  });
 });
+
+test('two concurrent publications cannot both advance the same revision',async()=>{
+ await env.withSecurityRulesDisabled(async context=>{
+  const db=context.firestore(),planId='concurrent-plan';
+  const planRef=doc(db,'users',uid,'workoutPlans',planId);
+  const revisionRef=doc(db,'users',uid,'workoutPlans',planId,'revisions','2');
+  await setDoc(planRef,{id:planId,publishedRevision:1,archived:false});
+  await setDoc(revisionRef,{...manifest,planId});
+  await setDoc(doc(db,'users',uid,'workoutPlans',planId,'revisions','2','exercises','e1'),exercise);
+  const publishOnce=()=>publishWorkoutRevisionTransaction({
+   db,uid,planId,revision:2,expectedPublishedRevision:1,...deps
+  });
+  const results=await Promise.allSettled([publishOnce(),publishOnce()]);
+  assert.equal(results.filter(r=>r.status==='fulfilled').length,1);
+  assert.equal(results.filter(r=>r.status==='rejected').length,1);
+  assert.match(String(results.find(r=>r.status==='rejected').reason),/Publication conflict/);
+  assert.equal((await getDoc(planRef)).data().publishedRevision,2);
+  assert.equal((await getDoc(revisionRef)).data().status,'published');
+ });
+});
+test('published revision children remain unchanged after a rejected replay',async()=>{
+ await env.withSecurityRulesDisabled(async context=>{
+  const db=context.firestore();
+  const original=(await getDoc(doc(db,childPath))).data();
+  await assert.rejects(()=>publish(db),/Publication conflict/);
+  const current=(await getDoc(doc(db,childPath))).data();
+  assert.deepEqual(current,original);
+ });
+});
