@@ -329,6 +329,16 @@ async function load(){
  }catch(error){if(generation!==loadGeneration)return;ready=false;console.error('Nexor session:',error);$('sessionMessage').textContent='Não foi possível carregar a sessão. Verifique a conexão.';}
  render();
 }
+function workoutExerciseLabel(day,index){
+ const raw=window.nexorWorkoutDays?.[day]?.[2]?.[index];
+ if(typeof raw!=='string')return 'Exercício '+(index+1);
+ const [group,name,reps]=raw.split('|');
+ return {group,name,reps};
+}
+function latestCompletedSetAt(current){
+ const stamps=current.sets.flat().filter(set=>set.done&&typeof set.completedAt==='string').map(set=>Date.parse(set.completedAt)).filter(Number.isFinite);
+ return stamps.length?Math.max(...stamps):null;
+}
 function render(){
  const panel=$('sessionPanel');if(!panel)return;
  const history=$('sessionHistory');
@@ -343,12 +353,26 @@ function render(){
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
- const rest=remainingRest(session);$('sessionRest').textContent=rest?restfmt(rest):'Pronto para a próxima série';
+ const lastCompleted=latestCompletedSetAt(session);
+ const rest=lastCompleted?Math.max(0,Math.ceil((lastCompleted+session.restSeconds*1000-Date.now())/1000)):0;
+ $('sessionRest').textContent=rest?'Descanso: '+restfmt(rest):'Pronto para a próxima série';
  const legacyBlocked=!v2ReadOnly&&v2PilotRequested();
  const pilotEdit=v2ReadOnly&&v2PendingCount===0&&v2PilotEnabledOffline()&&!!uid&&(navigator.onLine||session.sets.some((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))));
  const offlineBaselineIndexes=v2ReadOnly&&uid?session.sets.map((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))):[];
  const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving,v2ReadOnly,pilotEdit,legacyBlocked,v2PendingCount,navigator.onLine,offlineBaselineIndexes]);
- if(renderedSetKey!==setKey){renderedSetKey=setKey;$('sessionSetList').innerHTML=session.sets.map((sets,i)=>'<div class="session-set-row"><b>Exercício '+(i+1)+'</b> '+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+(set.done?' ✓':'')+'</button>').join(' ')+'</div>').join('');}
+ if(renderedSetKey!==setKey){
+  renderedSetKey=setKey;
+  const exercises=session.sets.map((sets,i)=>({sets,i,complete:sets.every(set=>set.done)}));
+  const buildExercise=({sets,i,complete})=>{
+   const details=workoutExerciseLabel(session.day,i);
+   const title=typeof details==='string'?details:details.name;
+   const subtitle=typeof details==='string'?'':details.group+' · '+sets.length+' séries · '+details.reps+' repetições';
+   const safe=text=>String(text).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[char]));
+   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button>').join('')+'</div></article>';
+  };
+  const pending=exercises.filter(row=>!row.complete),done=exercises.filter(row=>row.complete);
+  $('sessionSetList').innerHTML='<h3>Exercícios em andamento ('+pending.length+')</h3>'+pending.map(buildExercise).join('')+(done.length?'<h3 class="section">Exercícios concluídos ('+done.length+')</h3>'+done.map(buildExercise).join(''):'');
+ }
  $('finishSession').disabled=saving||offlineSaving||(v2ReadOnly&&!(v2PilotEnabled()&&!!uid&&navigator.onLine&&v2PendingCount===0))||legacyBlocked;
 }
 export function initSessionUI(getDay){
