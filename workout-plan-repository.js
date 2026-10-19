@@ -1,3 +1,4 @@
+import {planDynamicSessionFinish} from './workout-plan-finish.js';
 import {encodeDynamicSession} from './workout-plan-firestore-codec.js';
 import {planSessionCreation} from './workout-plan-session.js';
 
@@ -21,6 +22,27 @@ export async function createDynamicWorkoutSession({db,uid,candidate,runTransacti
   if(decision.action==='reuse')return {...decision};
   tx.set(root,{...encodeDynamicSession(candidate),updatedAt:serverTimestamp()});
   tx.set(pointer,{sessionId:candidate.id,updatedAt:serverTimestamp()});
+  return decision;
+ });
+}
+
+/** Atomically completes a dynamic session and releases only its own active pointer. */
+export async function finishDynamicWorkoutSession({db,uid,sessionId,endedAt,runTransaction,doc,serverTimestamp}){
+ if(!db||typeof uid!=='string'||!uid||typeof sessionId!=='string'||!sessionId||
+    !runTransaction||!doc||!serverTimestamp)throw Error('Parâmetros incompletos');
+ const root=doc(db,'users',uid,'dynamicSessions',sessionId);
+ const pointer=doc(db,'users',uid,'dynamicSessionControl','active');
+ return runTransaction(db,async tx=>{
+  const [snapshot,control]=await Promise.all([tx.get(root),tx.get(pointer)]);
+  const decision=planDynamicSessionFinish({
+   sessionId,sessionDocument:snapshot.exists()?snapshot.data():null,
+   activePointer:control.exists()?control.data():null,endedAt
+  });
+  if(decision.action==='conflict')throw Error('Conflito: '+decision.reason);
+  if(decision.action==='already-completed')return decision;
+  tx.update(root,{status:'completed',endedAt:decision.endedAt,
+   durationSeconds:decision.durationSeconds,updatedAt:serverTimestamp()});
+  tx.set(pointer,{sessionId:null,updatedAt:serverTimestamp()});
   return decision;
  });
 }
