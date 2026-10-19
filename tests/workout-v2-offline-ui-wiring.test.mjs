@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 
 const ui=readFileSync(new URL('../session-ui.js',import.meta.url),'utf8');
 test('V2 offline pilot prepares revision baselines after session hydration',()=>{
- assert.match(ui,/if\(session&&v2PilotEnabled\(\)\)primeV2OfflineBaselines\(accountUid,snapshot\.id\)/);
+ assert.match(ui,/if\(session&&v2PilotEnabled\(\)\)\{primeV2OfflineBaselines\(accountUid,snapshot\.id\)\.catch\(console\.warn\);loadPreviousWeights\(accountUid,session\.day,snapshot\.id\)\.catch\(console\.warn\);\}/);
  assert.match(ui,/queueV2SetEdit\(\{uid:account[\s\S]*?baseRevision:baseline\.revision,baseCompletedAt:set\.completedAt/);
 });
 test('V2 offline pilot preserves queued preview during reconnect',()=>{
