@@ -25,7 +25,12 @@ export function planSessionCreation({candidate,existing,activeSessionId}){
  if(!candidate?.id||!candidate.requestId)throw Error('Sessão inválida');
  if(existing){
   if(existing.id===candidate.id&&existing.requestId===candidate.requestId&&
-     existing.planId===candidate.planId)return {action:'reuse',sessionId:candidate.id};
+     existing.planId===candidate.planId&&existing.planRevision===candidate.planRevision&&
+     existing.status==='active'&&candidate.status==='active'&&
+     existing.startedAt===candidate.startedAt&&
+     JSON.stringify(existing.prescription)===JSON.stringify(candidate.prescription)&&
+     JSON.stringify(existing.sets)===JSON.stringify(candidate.sets)&&
+     activeSessionId===candidate.id)return {action:'reuse',sessionId:candidate.id};
   return {action:'conflict',reason:'session-id-already-used'};
  }
  if(activeSessionId)return {action:'conflict',reason:'another-session-active'};
