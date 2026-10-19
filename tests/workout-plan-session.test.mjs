@@ -20,3 +20,14 @@ test('retry reuses same session request and refuses duplicate active sessions',(
  assert.equal(planSessionCreation({candidate,existing:{...candidate,requestId:'other'},activeSessionId:null}).action,'conflict');
  assert.equal(planSessionCreation({candidate,existing:null,activeSessionId:'s2'}).action,'conflict');
 });
+
+test('retry refuses changed plan revision, prescription, sets or missing active pointer',()=>{
+ const candidate=prepareWorkoutFromPlan({plan,sessionId:'s1',requestId:'r1',now:1000});
+ const changedPrescription={...candidate,prescription:{...candidate.prescription,name:'Outro treino'}};
+ const changedRevision={...candidate,planRevision:2};
+ const changedSets={...candidate,sets:[[{done:true,completedAt:'2026-10-19T12:00:00.000Z'}]]};
+ for(const existing of [changedPrescription,changedRevision,changedSets]){
+  assert.equal(planSessionCreation({candidate,existing,activeSessionId:'s1'}).action,'conflict');
+ }
+ assert.equal(planSessionCreation({candidate,existing:candidate,activeSessionId:null}).action,'conflict');
+});
