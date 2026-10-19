@@ -171,6 +171,23 @@ service cloud.firestore {
         && e.restSeconds is int && e.restSeconds >= 0 && e.restSeconds <= 600
         && e.order is int && e.order >= 0 && e.order < 100;
     }
+    // Bounded explicit index validation: Firestore rules have no unrestricted list iteration.
+    function validDynamicPlanExercises(xs) {
+      return xs is list && xs.size() >= 1 && xs.size() <= 12
+        && validDynamicPlanExercise(xs[0])
+        && xs[0].order == 0
+        && (xs.size() <= 1 || (validDynamicPlanExercise(xs[1]) && xs[1].order == 1 && xs[1].id != xs[0].id))
+        && (xs.size() <= 2 || (validDynamicPlanExercise(xs[2]) && xs[2].order == 2 && xs[2].id != xs[0].id && xs[2].id != xs[1].id))
+        && (xs.size() <= 3 || (validDynamicPlanExercise(xs[3]) && xs[3].order == 3 && xs[3].id != xs[0].id && xs[3].id != xs[1].id && xs[3].id != xs[2].id))
+        && (xs.size() <= 4 || (validDynamicPlanExercise(xs[4]) && xs[4].order == 4 && xs[4].id != xs[0].id && xs[4].id != xs[1].id && xs[4].id != xs[2].id && xs[4].id != xs[3].id))
+        && (xs.size() <= 5 || (validDynamicPlanExercise(xs[5]) && xs[5].order == 5 && xs[5].id != xs[0].id && xs[5].id != xs[1].id && xs[5].id != xs[2].id && xs[5].id != xs[3].id && xs[5].id != xs[4].id))
+        && (xs.size() <= 6 || (validDynamicPlanExercise(xs[6]) && xs[6].order == 6 && xs[6].id != xs[0].id && xs[6].id != xs[1].id && xs[6].id != xs[2].id && xs[6].id != xs[3].id && xs[6].id != xs[4].id && xs[6].id != xs[5].id))
+        && (xs.size() <= 7 || (validDynamicPlanExercise(xs[7]) && xs[7].order == 7 && xs[7].id != xs[0].id && xs[7].id != xs[1].id && xs[7].id != xs[2].id && xs[7].id != xs[3].id && xs[7].id != xs[4].id && xs[7].id != xs[5].id && xs[7].id != xs[6].id))
+        && (xs.size() <= 8 || (validDynamicPlanExercise(xs[8]) && xs[8].order == 8 && xs[8].id != xs[0].id && xs[8].id != xs[1].id && xs[8].id != xs[2].id && xs[8].id != xs[3].id && xs[8].id != xs[4].id && xs[8].id != xs[5].id && xs[8].id != xs[6].id && xs[8].id != xs[7].id))
+        && (xs.size() <= 9 || (validDynamicPlanExercise(xs[9]) && xs[9].order == 9 && xs[9].id != xs[0].id && xs[9].id != xs[1].id && xs[9].id != xs[2].id && xs[9].id != xs[3].id && xs[9].id != xs[4].id && xs[9].id != xs[5].id && xs[9].id != xs[6].id && xs[9].id != xs[7].id && xs[9].id != xs[8].id))
+        && (xs.size() <= 10 || (validDynamicPlanExercise(xs[10]) && xs[10].order == 10 && xs[10].id != xs[0].id && xs[10].id != xs[1].id && xs[10].id != xs[2].id && xs[10].id != xs[3].id && xs[10].id != xs[4].id && xs[10].id != xs[5].id && xs[10].id != xs[6].id && xs[10].id != xs[7].id && xs[10].id != xs[8].id && xs[10].id != xs[9].id))
+        && (xs.size() <= 11 || (validDynamicPlanExercise(xs[11]) && xs[11].order == 11 && xs[11].id != xs[0].id && xs[11].id != xs[1].id && xs[11].id != xs[2].id && xs[11].id != xs[3].id && xs[11].id != xs[4].id && xs[11].id != xs[5].id && xs[11].id != xs[6].id && xs[11].id != xs[7].id && xs[11].id != xs[8].id && xs[11].id != xs[9].id && xs[11].id != xs[10].id));
+    }
     function validDynamicPlan(d, planId) {
       return d.keys().hasAll(['id','name','origin','revision','archived','exercises','updatedAt'])
         && d.keys().hasOnly(['id','name','origin','revision','archived','exercises','updatedAt'])
@@ -180,12 +197,7 @@ service cloud.firestore {
         && d.revision is int && d.revision >= 1
         && d.archived is bool
         && d.updatedAt == request.time
-        && d.exercises is list && d.exercises.size() >= 1 && d.exercises.size() <= 2
-        && validDynamicPlanExercise(d.exercises[0])
-        && (d.exercises.size() == 1 || validDynamicPlanExercise(d.exercises[1]))
-        && (d.exercises.size() == 1 || d.exercises[0].id != d.exercises[1].id)
-        && d.exercises[0].order == 0
-        && (d.exercises.size() == 1 || d.exercises[1].order == 1);
+        && validDynamicPlanExercises(d.exercises);
     }
     match /users/{uid}/workoutPlans/{planId} {
       allow read: if isOwner(uid);
