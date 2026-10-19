@@ -1,3 +1,4 @@
+import {encodeDynamicSession} from './workout-plan-firestore-codec.js';
 import {planSessionCreation} from './workout-plan-session.js';
 
 /**
@@ -18,7 +19,7 @@ export async function createDynamicWorkoutSession({db,uid,candidate,runTransacti
   });
   if(decision.action==='conflict')throw Error('Conflito: '+decision.reason);
   if(decision.action==='reuse')return {...decision};
-  tx.set(root,{...structuredClone(candidate),updatedAt:serverTimestamp()});
+  tx.set(root,{...encodeDynamicSession(candidate),updatedAt:serverTimestamp()});
   tx.set(pointer,{sessionId:candidate.id,updatedAt:serverTimestamp()});
   return decision;
  });
