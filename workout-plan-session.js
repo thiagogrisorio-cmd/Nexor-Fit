@@ -1,3 +1,4 @@
+import {decodeDynamicSession} from './workout-plan-firestore-codec.js';
 import {validateWorkoutPlan,snapshotWorkoutPrescription} from './workout-plan-model.js';
 
 /**
@@ -22,14 +23,18 @@ export function prepareWorkoutFromPlan({plan,sessionId,requestId,now=Date.now()}
  * conflicting IDs are rejected. Firestore integration must enforce atomically.
  */
 export function planSessionCreation({candidate,existing,activeSessionId}){
+ let persisted=existing;
+ if(existing?.sets?.every(row=>row&&Array.isArray(row.items))){
+  try{persisted=decodeDynamicSession(existing);}catch{return {action:'conflict',reason:'invalid-existing-session'};}
+ }
  if(!candidate?.id||!candidate.requestId)throw Error('Sessão inválida');
  if(existing){
-  if(existing.id===candidate.id&&existing.requestId===candidate.requestId&&
-     existing.planId===candidate.planId&&existing.planRevision===candidate.planRevision&&
-     existing.status==='active'&&candidate.status==='active'&&
-     existing.startedAt===candidate.startedAt&&
-     JSON.stringify(existing.prescription)===JSON.stringify(candidate.prescription)&&
-     JSON.stringify(existing.sets)===JSON.stringify(candidate.sets)&&
+  if(persisted.id===candidate.id&&persisted.requestId===candidate.requestId&&
+     persisted.planId===candidate.planId&&persisted.planRevision===candidate.planRevision&&
+     persisted.status==='active'&&candidate.status==='active'&&
+     persisted.startedAt===candidate.startedAt&&
+     JSON.stringify(persisted.prescription)===JSON.stringify(candidate.prescription)&&
+     JSON.stringify(persisted.sets)===JSON.stringify(candidate.sets)&&
      activeSessionId===candidate.id)return {action:'reuse',sessionId:candidate.id};
   return {action:'conflict',reason:'session-id-already-used'};
  }
