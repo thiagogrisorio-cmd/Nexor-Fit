@@ -1,7 +1,9 @@
+import {prepareWorkoutFromPlan} from '../workout-plan-session.js';
+import {encodeDynamicSession,decodeDynamicSession} from '../workout-plan-firestore-codec.js';
 import test,{before,after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {initializeTestEnvironment,assertFails} from '@firebase/rules-unit-testing';
+import {initializeTestEnvironment,assertFails,assertSucceeds} from '@firebase/rules-unit-testing';
 import {doc,getDoc,setDoc,deleteDoc,serverTimestamp} from 'firebase/firestore';
 
 /**
@@ -40,4 +42,27 @@ test('dynamic sessions and active pointers remain denied by default',async()=>{
    await assertFails(deleteDoc(doc(firestore,path)));
   }
  }
+});
+
+test('Firestore emulator round-trips variable sets through privileged test context only',async()=>{
+ const workout={id:'emulator-plan',name:'Personalizado',origin:'manual',exercises:[
+  {id:'e1',name:'Remada',muscleGroup:'Costas',sets:3,reps:'10'},
+  {id:'e2',name:'Agachamento',muscleGroup:'Pernas',sets:4,reps:'8'}
+ ]};
+ const candidate=prepareWorkoutFromPlan({plan:workout,sessionId:'emulator-session',requestId:'emulator-request',now:1000});
+ candidate.sets[0][0].weightKg=32.5;
+ const encoded=encodeDynamicSession(candidate);
+ await env.withSecurityRulesDisabled(async context=>{
+  const firestore=context.firestore();
+  const ref=doc(firestore,'users/emulator/dynamicSessions/emulator-session');
+  await assertSucceeds(setDoc(ref,encoded));
+  const snapshot=await assertSucceeds(getDoc(ref));
+  assert.equal(snapshot.exists(),true);
+  const restored=decodeDynamicSession(snapshot.data());
+  assert.deepEqual(restored,candidate);
+  assert.deepEqual(restored.sets.map(row=>row.length),[3,4]);
+  assert.equal(restored.sets[0][0].weightKg,32.5);
+ });
+ // A successful privileged emulator write must not grant normal client access.
+ await assertFails(getDoc(doc(user('emulator'),'users/emulator/dynamicSessions/emulator-session')));
 });
