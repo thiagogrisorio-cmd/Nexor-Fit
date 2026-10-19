@@ -22,3 +22,35 @@ export function decodeWorkoutForUI({metadata,exerciseDocuments}){
   throw Error('Sessão V1 inválida');
  return {format:'v1',session,readOnly:false};
 }
+
+/**
+ * Read-only UI projection. Never persists defaults or changes the V1/V2 source.
+ * The prescribed workout catalogue remains outside this session-data adapter.
+ */
+export function projectWorkoutForUI(decoded){
+ if(!decoded||!['v1','v2'].includes(decoded.format)||!decoded.session?.id)
+  throw Error('Sessão compatível ausente');
+ const source=decoded.session;
+ if(!Array.isArray(source.sets)||source.sets.length!==12||
+    source.sets.some(row=>!Array.isArray(row)||row.length!==2))
+  throw Error('Séries incompletas');
+ const exercises=source.sets.map((row,exerciseIndex)=>({
+  index:exerciseIndex,
+  sets:row.map((set,setIndex)=>{
+   if(typeof set?.done!=='boolean'||!(set.completedAt===null||typeof set.completedAt==='string'))
+    throw Error('Série inválida');
+   const weightKg=set.weightKg;
+   if(weightKg!==undefined&&(typeof weightKg!=='number'||!Number.isFinite(weightKg)||weightKg<0||weightKg>2000))
+    throw Error('Carga inválida');
+   return {index:setIndex,done:set.done,completedAt:set.completedAt,weightKg:weightKg??null};
+  })
+ }));
+ const completedSets=exercises.reduce((n,row)=>n+row.sets.filter(set=>set.done).length,0);
+ return {
+  id:source.id,day:source.day,status:source.status,sourceFormat:decoded.format,
+  startedAt:source.startedAt,endedAt:source.endedAt??null,
+  restSeconds:source.restSeconds??90,restUntil:source.restUntil??null,
+  durationSeconds:source.durationSeconds??null,
+  exercises,progress:{completedSets,totalSets:24,percent:Math.round(completedSets/24*100)}
+ };
+}
