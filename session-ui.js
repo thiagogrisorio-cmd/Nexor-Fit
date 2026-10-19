@@ -353,9 +353,8 @@ function render(){
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
- const lastCompleted=latestCompletedSetAt(session);
- const rest=lastCompleted?Math.max(0,Math.ceil((lastCompleted+session.restSeconds*1000-Date.now())/1000)):0;
- $('sessionRest').textContent=rest?'Descanso: '+restfmt(rest):'Pronto para a próxima série';
+ // Rest belongs to the exercise whose set was marked done, not to the whole workout.
+ $('sessionRest').textContent='O descanso de cada exercício aparece no próprio cartão.';
  const legacyBlocked=!v2ReadOnly&&v2PilotRequested();
  const pilotEdit=v2ReadOnly&&v2PendingCount===0&&v2PilotEnabledOffline()&&!!uid&&(navigator.onLine||session.sets.some((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))));
  const offlineBaselineIndexes=v2ReadOnly&&uid?session.sets.map((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))):[];
@@ -368,11 +367,20 @@ function render(){
    const title=typeof details==='string'?details:details.name;
    const subtitle=typeof details==='string'?'':details.group+' · '+sets.length+' séries · '+details.reps+' repetições';
    const safe=text=>String(text).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[char]));
-   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button>').join('')+'</div></article>';
+   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button>').join('')+'</div><p class="exercise-rest" data-rest-exercise="'+i+'" role="timer" aria-label="Descanso do exercício" hidden></p></article>';
   };
   const pending=exercises.filter(row=>!row.complete),done=exercises.filter(row=>row.complete);
   $('sessionSetList').innerHTML='<h3>Exercícios em andamento ('+pending.length+')</h3>'+pending.map(buildExercise).join('')+(done.length?'<h3 class="section">Exercícios concluídos ('+done.length+')</h3>'+done.map(buildExercise).join(''):'');
  }
+ // Update only countdown text every second; never recreate buttons while the user interacts.
+ $('sessionSetList').querySelectorAll('[data-rest-exercise]').forEach(target=>{
+  const index=Number(target.dataset.restExercise);
+  const sets=session.sets[index];
+  const last=sets&&!sets.every(set=>set.done)?sets.filter(set=>set.done&&typeof set.completedAt==='string').map(set=>Date.parse(set.completedAt)).filter(Number.isFinite):[];
+  const seconds=last.length?Math.max(0,Math.ceil((Math.max(...last)+session.restSeconds*1000-Date.now())/1000)):0;
+  target.hidden=seconds===0;
+  target.textContent=seconds?'Descanso deste exercício: '+restfmt(seconds):'';
+ });
  $('finishSession').disabled=saving||offlineSaving||(v2ReadOnly&&!(v2PilotEnabled()&&!!uid&&navigator.onLine&&v2PendingCount===0))||legacyBlocked;
 }
 export function initSessionUI(getDay){
