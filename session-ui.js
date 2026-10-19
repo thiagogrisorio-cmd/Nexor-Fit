@@ -339,6 +339,10 @@ function latestCompletedSetAt(current){
  const stamps=current.sets.flat().filter(set=>set.done&&typeof set.completedAt==='string').map(set=>Date.parse(set.completedAt)).filter(Number.isFinite);
  return stamps.length?Math.max(...stamps):null;
 }
+function exerciseRestSeconds(sets,restSeconds,now=Date.now()){
+ const stamps=sets.filter(set=>set.done&&typeof set.completedAt==='string').map(set=>Date.parse(set.completedAt)).filter(Number.isFinite);
+ return stamps.length?Math.max(0,Math.ceil((Math.max(...stamps)+restSeconds*1000-now)/1000)):0;
+}
 function render(){
  const panel=$('sessionPanel');if(!panel)return;
  const history=$('sessionHistory');
@@ -358,10 +362,11 @@ function render(){
  const legacyBlocked=!v2ReadOnly&&v2PilotRequested();
  const pilotEdit=v2ReadOnly&&v2PendingCount===0&&v2PilotEnabledOffline()&&!!uid&&(navigator.onLine||session.sets.some((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))));
  const offlineBaselineIndexes=v2ReadOnly&&uid?session.sets.map((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))):[];
- const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving,v2ReadOnly,pilotEdit,legacyBlocked,v2PendingCount,navigator.onLine,offlineBaselineIndexes]);
+ const restingCompleted=session.sets.map(sets=>sets.every(set=>set.done)&&exerciseRestSeconds(sets,session.restSeconds)>0);
+ const setKey=JSON.stringify([session.id,session.sets,saving,offlineSaving,v2ReadOnly,pilotEdit,legacyBlocked,v2PendingCount,navigator.onLine,offlineBaselineIndexes,restingCompleted]);
  if(renderedSetKey!==setKey){
   renderedSetKey=setKey;
-  const exercises=session.sets.map((sets,i)=>({sets,i,complete:sets.every(set=>set.done)}));
+  const exercises=session.sets.map((sets,i)=>({sets,i,complete:sets.every(set=>set.done)&&exerciseRestSeconds(sets,session.restSeconds)===0}));
   const buildExercise=({sets,i,complete})=>{
    const details=workoutExerciseLabel(session.day,i);
    const title=typeof details==='string'?details:details.name;
@@ -376,8 +381,7 @@ function render(){
  $('sessionSetList').querySelectorAll('[data-rest-exercise]').forEach(target=>{
   const index=Number(target.dataset.restExercise);
   const sets=session.sets[index];
-  const last=sets&&!sets.every(set=>set.done)?sets.filter(set=>set.done&&typeof set.completedAt==='string').map(set=>Date.parse(set.completedAt)).filter(Number.isFinite):[];
-  const seconds=last.length?Math.max(0,Math.ceil((Math.max(...last)+session.restSeconds*1000-Date.now())/1000)):0;
+  const seconds=sets?exerciseRestSeconds(sets,session.restSeconds):0;
   target.hidden=seconds===0;
   target.textContent=seconds?'Descanso deste exercício: '+restfmt(seconds):'';
  });
