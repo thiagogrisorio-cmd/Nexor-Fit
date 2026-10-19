@@ -36,3 +36,30 @@ test('transaction completes and clears pointer without deleting session',async()
  assert.equal(sets[0][0],pointer);
  assert.equal(sets[0][1].sessionId,null);
 });
+
+test('repeated completion is idempotent and never clears a newer active pointer',async()=>{
+ const root='users/alice/dynamicSessions/s';
+ const pointer='users/alice/dynamicSessionControl/active';
+ const completed={...session,status:'completed',endedAt};
+ const writes=[];
+ const doc=(_db,...parts)=>parts.join('/');
+ const runTransaction=async(_db,callback)=>callback({
+  get:async key=>({exists:()=>true,data:()=>key===root?completed:{sessionId:'newer-session'}}),
+  update:(...args)=>writes.push(args),set:(...args)=>writes.push(args)
+ });
+ const result=await finishDynamicWorkoutSession({db:{},uid:'alice',sessionId:'s',endedAt,doc,runTransaction,serverTimestamp:()=>123});
+ assert.equal(result.action,'already-completed');
+ assert.equal(writes.length,0);
+});
+test('conflicting active pointer rejects finish with no writes',async()=>{
+ const writes=[];
+ const doc=(_db,...parts)=>parts.join('/');
+ const runTransaction=async(_db,callback)=>callback({
+  get:async key=>({exists:()=>true,data:()=>key.endsWith('/active')?{sessionId:'another'}:session}),
+  update:(...args)=>writes.push(args),set:(...args)=>writes.push(args)
+ });
+ await assert.rejects(()=>finishDynamicWorkoutSession({
+  db:{},uid:'alice',sessionId:'s',endedAt,doc,runTransaction,serverTimestamp:()=>123
+ }),/Conflito: pointer-mismatch/);
+ assert.equal(writes.length,0);
+});
