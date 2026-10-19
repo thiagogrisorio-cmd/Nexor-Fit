@@ -25,7 +25,7 @@ test('creates one dynamic session and its active pointer in a transaction',async
  assert.equal(h.writes.length,2);
  assert.equal(h.writes[0].key,root);
  assert.equal(h.writes[1].key,pointer);
- assert.deepEqual(h.writes[0].value.sets.map(x=>x.length),[3]);
+ assert.deepEqual(h.writes[0].value.sets.map(x=>x.items.length),[3]);
 });
 test('idempotent retry performs no writes',async()=>{
  const h=harness({[root]:candidate,[pointer]:{sessionId:'s1'}});
