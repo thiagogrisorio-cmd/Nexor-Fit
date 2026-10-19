@@ -107,7 +107,7 @@ test('offline V2 controls require a baseline for the active session and exercise
 
 test('V2 set render cache invalidates on connectivity and per-exercise baseline changes',()=>{
  assert.match(ui,/const offlineBaselineIndexes=v2ReadOnly&&uid\?session\.sets\.map\(\(_,i\)=>v2ExerciseBaselines\.has\(v2BaselineKey\(uid,session\.id,i\)\)\):\[\]/);
- assert.match(ui,/const setKey=JSON\.stringify\(\[session\.id,session\.sets,saving,offlineSaving,v2ReadOnly,pilotEdit,legacyBlocked,v2PendingCount,navigator\.onLine,offlineBaselineIndexes\]\)/);
+ assert.match(ui,/const setKey=JSON\.stringify\(\[session\.id,session\.sets,saving,offlineSaving,v2ReadOnly,pilotEdit,legacyBlocked,v2PendingCount,navigator\.onLine,offlineBaselineIndexes,restingCompleted\]\)/);
 });
 
 test('successful online V2 edit invalidates the prior offline revision baseline',()=>{
