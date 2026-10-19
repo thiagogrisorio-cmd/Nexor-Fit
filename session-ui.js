@@ -370,7 +370,7 @@ export function initSessionUI(getDay){
     }finally{saving=false;render();}
     await load();
    }else throw Error('Início V1 desativado; faça login e conecte-se para iniciar V2');
-  }catch(e){console.error('Nexor start:',e);alert('Não foi possível iniciar o treino. Tente novamente.');}
+  }catch(e){console.error('Nexor start:',e);$('sessionMessage').textContent='Falha ao iniciar sessão V2: '+(e?.code||e?.message||'erro desconhecido')+'. Consulte o console (F12) para detalhes.';alert('Não foi possível iniciar o treino V2. Veja o diagnóstico abaixo do botão.');}
  };
  $('sessionSetList').onclick=async event=>{
   const button=event.target.closest('[data-set]');if(!button||saving||offlineSaving)return;
