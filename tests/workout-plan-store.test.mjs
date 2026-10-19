@@ -26,7 +26,7 @@ test('editing requires exact expected revision and preserves prior source',async
  const updated={...plan,name:'Novo nome',revision:2};
  await updateWorkoutPlan({...h,plan:updated,expectedRevision:1});
  assert.equal(h.records.get(path).name,'Novo nome');
- await assert.rejects(()=>updateWorkoutPlan({...h,plan:{...updated,revision:3},expectedRevision:1}),/Conflito/);
+ await assert.rejects(()=>updateWorkoutPlan({...h,plan:{...updated,revision:2},expectedRevision:1}),/Conflito/);
  assert.equal(plan.name,'Treino próprio');
 });
 test('archiving is non-destructive and idempotent at same revision',async()=>{
