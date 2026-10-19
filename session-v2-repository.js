@@ -40,11 +40,12 @@ export function readV2Workout(metadata,exerciseSnapshots){
  * Change one V2 set using Firestore optimistic transaction retries.
  * The expectedCompletedAt token prevents silently overwriting a remote edit.
  */
-export async function updateV2Set({db,uid,sessionId,exerciseIndex,setIndex,done,expectedCompletedAt,expectedRevision,runTransaction,doc,serverTimestamp,now=Date.now()}){
+export async function updateV2Set({db,uid,sessionId,exerciseIndex,setIndex,done,expectedCompletedAt,expectedRevision,runTransaction,doc,serverTimestamp,weightKg,now=Date.now()}){
  if(!uid||!sessionId||!db||!runTransaction||!doc||!serverTimestamp)throw Error('Parâmetros V2 incompletos');
  if(!Number.isInteger(exerciseIndex)||exerciseIndex<0||exerciseIndex>11)throw Error('Exercício inválido');
  if(!Number.isInteger(setIndex)||setIndex<0||setIndex>1)throw Error('Série inválida');
  if(typeof done!=='boolean')throw Error('Estado inválido');
+ if(weightKg!==undefined&&(typeof weightKg!=='number'||!Number.isFinite(weightKg)||weightKg<0||weightKg>2000))throw Error('Carga inválida');
  if(expectedCompletedAt!==null&&typeof expectedCompletedAt!=='string')throw Error('Versão esperada inválida');
  if(!Number.isInteger(expectedRevision)||expectedRevision<0)throw Error('Revisão esperada inválida');
  const root=doc(db,'users',uid,'sessions',sessionId);
@@ -58,7 +59,7 @@ export async function updateV2Set({db,uid,sessionId,exerciseIndex,setIndex,done,
   const current=data.sets[setIndex];
   if(!current||current.completedAt!==expectedCompletedAt||data.revision!==expectedRevision)throw Error('Conflito: série alterada em outro aparelho');
   const sets=data.sets.map(item=>({...item}));
-  sets[setIndex]={done,completedAt:done?new Date(now).toISOString():null};
+  sets[setIndex]={...current,done,completedAt:done?new Date(now).toISOString():null,...(weightKg===undefined?{}:{weightKg})};
   tx.update(exercise,{sets,revision:expectedRevision+1,updatedAt:serverTimestamp()});
   return sets[setIndex];
  });
