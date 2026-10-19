@@ -42,12 +42,12 @@ test('experimental plan fixture does not authorize dynamic sessions',async()=>{
  await assertFails(setDoc(doc(db('alice'),'users/alice/dynamicSessionControl/active'),{sessionId:'s1',updatedAt:serverTimestamp()}));
 });
 
-test('experimental fixture accepts six distinct exercises and rejects seven',async()=>{
- const exercises=Array.from({length:6},(_,i)=>({...ex,id:'exercise-'+i,order:i}));
- const ref=doc(db('alice'),'users/alice/workoutPlans/plan-six');
+test('experimental fixture accepts two distinct exercises and rejects three',async()=>{
+ const exercises=Array.from({length:2},(_,i)=>({...ex,id:'exercise-'+i,order:i}));
+ const ref=doc(db('alice'),'users/alice/workoutPlans/plan-two');
  await assertSucceeds(setDoc(ref,{...plan,id:'plan-twelve',exercises}));
- await assertFails(setDoc(doc(db('alice'),'users/alice/workoutPlans/plan-seven'),{
-  ...plan,id:'plan-thirteen',exercises:[...exercises,{...ex,id:'exercise-6',order:6}]
+ await assertFails(setDoc(doc(db('alice'),'users/alice/workoutPlans/plan-three'),{
+  ...plan,id:'plan-thirteen',exercises:[...exercises,{...ex,id:'exercise-2',order:2}]
  }));
 });
 test('experimental fixture rejects duplicate exercise ids in a larger plan',async()=>{
