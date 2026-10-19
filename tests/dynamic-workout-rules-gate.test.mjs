@@ -19,7 +19,7 @@ after(async()=>{if(env)await env.cleanup()});
 const user=uid=>env.authenticatedContext(uid).firestore();
 const guest=()=>env.unauthenticatedContext().firestore();
 const plan={id:'plan-1',name:'Meu treino',origin:'manual',revision:1,archived:false,exercises:[{id:'e1',name:'Agachamento',muscleGroup:'Pernas',sets:3,reps:'8-12',restSeconds:90,order:0}],updatedAt:serverTimestamp()};
-const session={id:'session-1',requestId:'request-1',planId:'plan-1',planRevision:1,status:'active',startedAt:'2026-10-19T12:00:00.000Z',endedAt:null,prescription:{...plan,updatedAt:undefined},sets:[[{done:false,completedAt:null}]],updatedAt:serverTimestamp()};
+const session={id:'session-1',requestId:'request-1',planId:'plan-1',planRevision:1,status:'active',startedAt:'2026-10-19T12:00:00.000Z',endedAt:null,prescription:{id:'plan-1',name:'Meu treino',origin:'manual',revision:1,exercises:[]},sets:[[{done:false,completedAt:null}]],updatedAt:serverTimestamp()};
 test('dynamic workout plans remain denied for owner, other user and guest until rules are reviewed',async()=>{
  const path='users/alice/workoutPlans/plan-1';
  for(const firestore of [user('alice'),user('bob'),guest()]){
