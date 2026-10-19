@@ -132,3 +132,16 @@ test('queued V2 edits preserve local preview but lock additional edits and finis
 test('V2 finish rechecks account, session and connectivity after async queue lookup',()=>{
  assert.match(ui,/if\(\(await listPendingV2Edits\(account\)\)\.some\(item=>item\.sessionId===id\)\)[\s\S]*?if\(uid!==account\|\|auth\.currentUser\?\.uid!==account\|\|session\?\.id!==id\|\|!navigator\.onLine\)return;\s*try\{/);
 });
+
+test('V2 workout progress uses session exercise completion after rest',()=>{
+ assert.match(ui,/const completeExercises=session\.sets\.filter\(sets=>sets\.every\(set=>set\.done\)&&exerciseRestSeconds\(sets,session\.restSeconds\)===0\)\.length/);
+ assert.match(ui,/\$\('progressPct'\)\.textContent=percent\+'%'/);
+ assert.match(ui,/\$\('progressCount'\)\.textContent=completeExercises/);
+});
+test('V2 exercise card embeds demonstration and per-exercise rest timer',()=>{
+ assert.match(ui,/const demoUrl='https:\/\/www\.youtube\.com\/results\?search_query='/);
+ assert.match(ui,/class="session-exercise-tools"/);
+ assert.match(ui,/data-rest-exercise/);
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ assert.match(html,/body\.nexor-authenticated #exerciseList\{display:none\}/);
+});
