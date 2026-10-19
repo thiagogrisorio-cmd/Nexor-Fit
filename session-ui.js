@@ -21,6 +21,8 @@ let v2LoadToken=0;
 let v2PendingCount=0;
 let legacySnapshotReloadInFlight=false;
 const v2ExerciseBaselines=new Map();
+const weightDrafts=new Map();
+const weightKey=(id,i,j)=>id+':'+i+':'+j;
 const v2BaselineKey=(account,id,index)=>account+':'+id+':'+index;
 async function primeV2OfflineBaselines(account,id){
  if(!navigator.onLine)return;
@@ -75,12 +77,23 @@ async function editV2PilotSet(exerciseIndex,setIndex){
  const row=snapshot.data(),set=row.sets?.[setIndex];
  if(!set||typeof set.done!=='boolean')throw Error('Série V2 inválida');
  if(account!==auth.currentUser?.uid||session?.id!==id)throw Error('Sessão alterada');
- await updateV2Set({db,uid:account,sessionId:id,exerciseIndex,setIndex,done:!set.done,expectedRevision:row.revision,expectedCompletedAt:set.completedAt,runTransaction,doc,serverTimestamp});
+ const draft=weightDrafts.get(weightKey(id,exerciseIndex,setIndex));
+ const weightKg=draft===undefined?undefined:(draft===''?undefined:Number(draft));
+ if(weightKg!==undefined&&(!Number.isFinite(weightKg)||weightKg<0||weightKg>2000))throw Error('Carga inválida: informe entre 0 e 2000 kg');
+ await updateV2Set({db,uid:account,sessionId:id,exerciseIndex,setIndex,done:!set.done,weightKg,expectedRevision:row.revision,expectedCompletedAt:set.completedAt,runTransaction,doc,serverTimestamp});
+ weightDrafts.delete(weightKey(id,exerciseIndex,setIndex));
  // The old revision cannot authorize an offline edit after this online write.
  v2ExerciseBaselines.delete(v2BaselineKey(account,id,exerciseIndex));
 
 }
 
+function adjustWeightDraft(target,step){
+ const input=target.closest('.weight-controls')?.querySelector('[data-set-weight]');
+ if(!input)return;
+ const current=input.value===''?0:Number(input.value);
+ input.value=String(Math.min(2000,Math.max(0,Math.round((current+step)*2)/2)));
+ input.dispatchEvent(new Event('input',{bubbles:true}));
+}
 function stopLiveListeners(){
  v2LoadToken++;
  if(stopControlListener){stopControlListener();stopControlListener=null;}
@@ -378,7 +391,7 @@ function render(){
    const subtitle=typeof details==='string'?'':details.group+' · '+sets.length+' séries · '+details.reps+' repetições';
    const demoUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(title+' execução correta musculação');
    const safe=text=>String(text).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[char]));
-   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button>').join('')+'</div><div class="session-exercise-tools"><a class="btn outline small" target="_blank" rel="noopener noreferrer" href="'+demoUrl+'">▶ Demonstração</a></div><p class="exercise-rest" data-rest-exercise="'+i+'" role="timer" aria-label="Descanso do exercício" hidden></p></article>';
+   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button><label class="set-weight">Carga série '+(j+1)+' (kg)<span class="weight-controls"><button type="button" data-weight-minus="'+i+'-'+j+'" aria-label="Diminuir carga">−</button><input type="number" min="0" max="2000" step="0.5" inputmode="decimal" data-set-weight="'+i+'-'+j+'" value="'+safe(weightDrafts.get(weightKey(session.id,i,j))??set.weightKg??'')+'" placeholder="Opcional"><button type="button" data-weight-plus="'+i+'-'+j+'" aria-label="Aumentar carga">+</button></span></label>').join('')+'</div><div class="session-exercise-tools"><a class="btn outline small" target="_blank" rel="noopener noreferrer" href="'+demoUrl+'">▶ Demonstração</a></div><p class="exercise-rest" data-rest-exercise="'+i+'" role="timer" aria-label="Descanso do exercício" hidden></p></article>';
   };
   const pending=exercises.filter(row=>!row.complete),done=exercises.filter(row=>row.complete);
   $('sessionSetList').innerHTML='<h3>Exercícios em andamento ('+pending.length+')</h3>'+pending.map(buildExercise).join('')+(done.length?'<h3 class="section">Exercícios concluídos ('+done.length+')</h3>'+done.map(buildExercise).join(''):'');
