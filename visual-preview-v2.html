@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#050607">
+<title>NEXOR FIT 2.0 — Prévia visual isolada</title>
+<link rel="stylesheet" href="./nexor-visual-v2.css">
+<style>body{margin:0;background:#050607}.nf-preview-note{font-size:12px;color:#a6abb5;border:1px dashed #555b65;border-radius:12px;padding:12px;margin:16px 0}.nf-preview-head{display:flex;justify-content:space-between;align-items:center}.nf-preview-metric{font-weight:900;color:#ff851b}.nf-preview-card{display:flex;flex-direction:column;gap:12px;min-height:180px}.nf-preview-card .nf-button{margin-top:auto}.nf-preview-list{display:flex;justify-content:space-between;gap:12px;font-size:13px}.nf-preview-list strong{color:#fff}.nf-preview-list span{color:#a6abb5}</style>
+</head>
+<body>
+<main class="nf-shell">
+<header class="nf-preview-head"><div class="nf-brand">NEXOR<span>FIT</span></div><span aria-label="Prévia do design" class="nf-eyebrow">Prévia visual</span></header>
+<p class="nf-preview-note">Protótipo estático e isolado. Nenhum login, dado de treino ou sincronização está conectado. Os nomes e indicadores abaixo são ilustrativos.</p>
+<h1 class="nf-heading">Escolha seu treino</h1>
+<p class="nf-subtitle">Crie seus próprios treinos ou receba sugestões personalizadas após responder ao questionário.</p>
+<section class="nf-stack" aria-label="Ações para planos de treino">
+<button class="nf-button" type="button" disabled aria-label="Criar treino — disponível em etapa futura">+ Criar meu treino</button>
+<button class="nf-button nf-button--outline" type="button" disabled aria-label="Responder questionário — disponível em etapa futura">Receber sugestão de treino</button>
+</section>
+<h2 style="margin:28px 0 12px;font-size:20px">Exemplos de cartões</h2>
+<div class="nf-grid">
+<article class="nf-card nf-preview-card"><div class="nf-eyebrow">Exemplo ilustrativo</div><h2>Treino A</h2><div class="nf-muted">Peito e quadríceps</div><div class="nf-preview-list"><span>Exercícios</span><strong>Variável</strong></div><button class="nf-button" type="button" disabled>Iniciar</button></article>
+<article class="nf-card nf-preview-card"><div class="nf-eyebrow">Exemplo ilustrativo</div><h2>Treino B</h2><div class="nf-muted">Costas e bíceps</div><div class="nf-preview-list"><span>Exercícios</span><strong>Variável</strong></div><button class="nf-button" type="button" disabled>Iniciar</button></article>
+</div>
+<h2 style="margin:28px 0 12px;font-size:20px">Componentes da sessão</h2>
+<section class="nf-card nf-stack"><div class="nf-preview-head"><strong>Progresso do treino</strong><span class="nf-preview-metric">25%</span></div><div class="nf-progress" role="progressbar" aria-label="Progresso ilustrativo" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"><span style="--nf-progress:25%"></span></div><div class="nf-stats"><div class="nf-card nf-stat"><strong>3/12</strong><small>Exercícios</small></div><div class="nf-card nf-stat"><strong>8/36</strong><small>Séries</small></div><div class="nf-card nf-stat"><strong>14 min</strong><small>Tempo</small></div></div></section>
+</main>
+<nav class="nf-tabs" aria-label="Navegação ilustrativa"><button class="nf-tab" aria-current="page" disabled>Início</button><button class="nf-tab" disabled>Sessão</button><button class="nf-tab" disabled>Treinos</button><button class="nf-tab" disabled>Histórico</button><button class="nf-tab" disabled>Perfil</button></nav>
+</body>
+</html>

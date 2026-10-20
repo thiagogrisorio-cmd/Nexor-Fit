@@ -1,0 +1,187 @@
+// users/{uid}/workouts/{0..3}: session string 1..64, logged bool,
+// exercises: exactly 12 {done bool, weight string <=16, empty or 0..2000 kg},
+// updatedAt: server timestamp. All fields required; uid determined by path.
+// users/{uid}/history/{session}: day int 0..3, at timestamp, immutable.
+// History is self-reported; historical timestamps support explicit import.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() { return request.auth != null; }
+    function isOwner(uid) { return isAuthenticated() && request.auth.uid == uid; }
+    function validExercise(e) {
+      return e is map && e.keys().hasAll(['done','weight'])
+        && e.keys().hasOnly(['done','weight']) && e.done is bool
+        && e.weight is string && e.weight.size() <= 16
+        && (e.weight == '' || (e.weight.matches('^[0-9]+([.][0-9]+)?$')
+          && float(e.weight) >= 0 && float(e.weight) <= 2000));
+    }
+    function validWorkout(d) {
+      return d.keys().hasAll(['session','logged','exercises','updatedAt'])
+        && d.keys().hasOnly(['session','logged','exercises','updatedAt'])
+        && d.session is string && d.session.size() >= 1 && d.session.size() <= 64
+        && d.session.matches('^[a-zA-Z0-9-]+$') && d.logged is bool
+        && d.updatedAt is timestamp && d.updatedAt == request.time
+        && d.exercises is list && d.exercises.size() == 12
+        && validExercise(d.exercises[0]) && validExercise(d.exercises[1])
+        && validExercise(d.exercises[2]) && validExercise(d.exercises[3])
+        && validExercise(d.exercises[4]) && validExercise(d.exercises[5])
+        && validExercise(d.exercises[6]) && validExercise(d.exercises[7])
+        && validExercise(d.exercises[8]) && validExercise(d.exercises[9])
+        && validExercise(d.exercises[10]) && validExercise(d.exercises[11]);
+    }
+    function validHistory(d) {
+      return d.keys().hasAll(['day','at']) && d.keys().hasOnly(['day','at'])
+        && d.day is int && d.day >= 0 && d.day <= 3
+        && d.at is timestamp && d.at <= request.time + duration.value(5,'m');
+    }
+    match /users/{uid}/workouts/{day} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && day.matches('^[0-3]$')
+        && validWorkout(request.resource.data);
+    }
+    match /users/{uid}/history/{session} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && session.size() <= 64
+        && validHistory(request.resource.data);
+      allow update: if isOwner(uid) && validHistory(request.resource.data)
+        && request.resource.data == resource.data;
+    }
+
+    function validSetEntry(s) {
+      return s is map && s.keys().hasAll(['done','completedAt'])
+        && s.keys().hasOnly(['done','completedAt','weightKg'])
+        && (!s.keys().hasAny(['weightKg']) || (s.weightKg is number && s.weightKg >= 0 && s.weightKg <= 2000))
+        && s.done is bool
+        && (s.completedAt == null || (s.completedAt is string && s.completedAt.size() <= 32));
+    }
+    function validSetPair(p) {
+      return p is list && p.size() == 2
+        && validSetEntry(p[0]) && validSetEntry(p[1]);
+    }
+    function validSetRow(row) {
+      return row is map && validSetPair(row.items);
+    }
+    // V1 sessions remain owner-readable, but all new client writes require schemaVersion 2.
+    // Active workout sessions: owner-only, bounded records.
+    match /users/{uid}/sessions/{sessionId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && sessionId.size() >= 1 && sessionId.size() <= 64
+        && sessionId.matches('^[a-zA-Z0-9-]+$')
+        && request.resource.data.keys().hasAll(['id','day','status','startedAt','restSeconds','updatedAt'])
+        && request.resource.data.keys().hasOnly(['id','day','status','startedAt','endedAt','durationSeconds','restSeconds','restUntil','sets','schemaVersion','updatedAt'])
+        && request.resource.data.id == sessionId
+        && request.resource.data.day is int
+        && request.resource.data.day >= 0 && request.resource.data.day <= 3
+        && request.resource.data.status in ['active','completed']
+        && ((request.resource.data.keys().hasAll(['schemaVersion'])
+             && request.resource.data.schemaVersion == 2
+             && !request.resource.data.keys().hasAny(['sets']))
+           )
+        && request.resource.data.startedAt is string
+        && request.resource.data.startedAt.size() == 24
+        && request.resource.data.startedAt.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}Z$')
+        && request.resource.data.restSeconds is int
+        && request.resource.data.restSeconds >= 0 && request.resource.data.restSeconds <= 600
+        && request.resource.data.updatedAt == request.time
+        && (!exists(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId))
+          || (resource.data.status == 'active'
+              && request.resource.data.startedAt == resource.data.startedAt
+              && request.resource.data.day == resource.data.day
+              && (!resource.data.keys().hasAny(['schemaVersion'])
+                || request.resource.data.schemaVersion == 2)
+              && (request.resource.data.keys().hasAny(['schemaVersion']) == resource.data.keys().hasAny(['schemaVersion'])
+                || (getAfter(/databases/$(database)/documents/users/$(uid)/sessionBackups/$(sessionId)).data.original == resource.data))));
+    }
+    // Summaries are generated only by a privileged backend; clients may read but never write.
+    match /users/{uid}/sessionSummaries/{sessionId} {
+      allow read: if isOwner(uid);
+      allow create, update, delete: if false;
+    }
+    match /users/{uid}/sessions/{sessionId}/exercises/{exerciseId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && exerciseId in ['0','1','2','3','4','5','6','7','8','9','10','11']
+        && request.resource.data.keys().hasAll(['index','sessionId','sets','revision','updatedAt'])
+        && request.resource.data.keys().hasOnly(['index','sessionId','sets','revision','updatedAt'])
+        && request.resource.data.index is int
+        && request.resource.data.index >= 0 && request.resource.data.index <= 11
+        && request.resource.data.revision is int
+        && request.resource.data.revision >= 0
+        && request.resource.data.revision <= 1000000000
+        && string(request.resource.data.index) == exerciseId
+        && request.resource.data.sessionId == sessionId
+        && validSetPair(request.resource.data.sets)
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.revision == 0
+        && getAfter(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.id == sessionId;
+      allow update: if isOwner(uid)
+        && request.resource.data.keys().hasAll(['index','sessionId','sets','revision','updatedAt'])
+        && request.resource.data.keys().hasOnly(['index','sessionId','sets','revision','updatedAt'])
+        && resource.data.sessionId == sessionId
+        && resource.data.index is int
+        && string(resource.data.index) == exerciseId
+        && request.resource.data.index == resource.data.index
+        && request.resource.data.sessionId == sessionId
+        && resource.data.revision is int
+        && resource.data.revision >= 0 && resource.data.revision < 1000000000
+        && request.resource.data.revision == resource.data.revision + 1
+        && get(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.schemaVersion == 2
+        && get(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.status == 'active'
+        && validSetPair(request.resource.data.sets)
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+    // Immutable migration backups, owner-readable.
+    match /users/{uid}/sessionBackups/{sessionId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && sessionId.size() >= 1 && sessionId.size() <= 64
+        && request.resource.data.keys().hasAll(['sessionId','original','createdAt'])
+        && request.resource.data.keys().hasOnly(['sessionId','original','createdAt'])
+        && request.resource.data.sessionId == sessionId
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.original is map
+        && request.resource.data.original.id == sessionId
+        && !request.resource.data.original.keys().hasAny(['schemaVersion'])
+        && request.resource.data.original.keys().hasAll(['sets'])
+        && get(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data == request.resource.data.original
+        && getAfter(/databases/$(database)/documents/users/$(uid)/sessions/$(sessionId)).data.schemaVersion == 2;
+      allow update, delete: if false;
+    }
+    match /users/{uid}/sessionControl/{controlId} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid) && controlId == 'active'
+        && request.resource.data.keys().hasOnly(['sessionId','updatedAt'])
+        && request.resource.data.sessionId is string
+        && request.resource.data.sessionId.size() <= 64
+        && request.resource.data.updatedAt == request.time;
+    }
+    // Isolated emulator prototype only: exercise documents without parent publication.
+    function validChildExercise(d,exerciseId) {
+      return d.keys().hasAll(['id','name','muscleGroup','sets','reps','restSeconds','order','revision','updatedAt'])
+        && d.keys().hasOnly(['id','name','muscleGroup','sets','reps','restSeconds','order','revision','updatedAt'])
+        && d.id == exerciseId && exerciseId.size() >= 1 && exerciseId.size() <= 128
+        && d.name is string && d.name.size() >= 1 && d.name.size() <= 128
+        && d.muscleGroup is string && d.muscleGroup.size() >= 1 && d.muscleGroup.size() <= 128
+        && d.reps is string && d.reps.size() >= 1 && d.reps.size() <= 128
+        && d.sets is int && d.sets >= 1 && d.sets <= 12
+        && d.restSeconds is int && d.restSeconds >= 0 && d.restSeconds <= 600
+        && d.order is int && d.order >= 0 && d.order < 100
+        && d.revision is int && d.revision >= 1
+        && d.updatedAt == request.time;
+    }
+    match /users/{uid}/workoutPlans/{planId}/exercises/{exerciseId} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && validChildExercise(request.resource.data,exerciseId)
+        && request.resource.data.revision == 1;
+      allow update: if isOwner(uid)
+        && validChildExercise(request.resource.data,exerciseId)
+        && request.resource.data.id == resource.data.id
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

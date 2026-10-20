@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050607"><title>NEXOR FIT 2.0 — Sessão (prévia)</title><link rel="stylesheet" href="./nexor-visual-v2.css">
+<style>body{margin:0;background:#050607}.nf-top{display:flex;justify-content:space-between;align-items:center}.nf-clock{font-weight:900;font-variant-numeric:tabular-nums}.nf-demo{font-size:12px;color:#a6abb5;border:1px dashed #555b65;border-radius:12px;padding:12px;margin:14px 0}.nf-pills{display:flex;flex-wrap:wrap;gap:6px}.nf-pill{display:grid;place-items:center;border:1px solid #3b414b;border-radius:100px;width:29px;height:29px;color:#c5c9d0;font-size:12px}.nf-pill.done{background:#1f652c;border-color:#1f652c;color:white}.nf-pill.active{background:#ff851b;border-color:#ff851b;color:#080808;font-weight:900}.nf-session-card{margin-top:18px}.nf-session-card .nf-button{width:100%;margin-top:14px}.nf-session-stats{margin-top:12px}</style></head>
+<body><main class="nf-shell"><header class="nf-top"><div class="nf-brand">NEXOR<span>FIT</span></div><span class="nf-eyebrow">Sessão ilustrativa</span></header>
+<h1 class="nf-heading">Treino personalizado</h1><p class="nf-subtitle">Peito e quadríceps · exemplo, não um treino obrigatório</p>
+<p class="nf-demo">Prévia isolada. Os dados abaixo são locais e fictícios. Não há conexão com Firebase nem alteração de sessões.</p>
+<section class="nf-card" aria-label="Progresso da sessão"><div class="nf-top"><strong>Progresso da sessão</strong><strong id="percent" style="color:#ff851b">0%</strong></div><div class="nf-progress" style="margin-top:14px" role="progressbar" aria-label="Séries concluídas" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress"><span id="progressFill"></span></div><div class="nf-stats nf-session-stats"><div class="nf-card nf-stat"><strong id="exerciseCount">—</strong><small>Exercícios</small></div><div class="nf-card nf-stat"><strong id="setCount">—</strong><small>Séries</small></div><div class="nf-card nf-stat"><strong id="elapsed">—</strong><small>Tempo ilustrativo</small></div></div></section>
+<h2 style="margin:24px 0 12px;font-size:18px">Exercícios da sessão</h2><div class="nf-pills" id="exercisePills" aria-label="Estado dos exercícios"></div>
+<section class="nf-card nf-session-card"><div class="nf-eyebrow">Exercício em destaque</div><h2 id="exerciseTitle">—</h2><p class="nf-muted" id="exerciseDescription">—</p><button class="nf-button" type="button" disabled>Ver exercício</button></section>
+</main><nav class="nf-tabs" aria-label="Navegação ilustrativa"><button class="nf-tab" disabled>Início</button><button class="nf-tab" aria-current="page" disabled>Sessão</button><button class="nf-tab" disabled>Treinos</button><button class="nf-tab" disabled>Histórico</button><button class="nf-tab" disabled>Perfil</button></nav>
+<script type="module">
+import {workoutPreviewProgress} from './nexor-visual-progress.js';
+const exercises=[{name:'Supino reto',muscleGroup:'Peito',sets:2,reps:'6–8'},{name:'Agachamento livre',muscleGroup:'Quadríceps',sets:3,reps:'8–10'},{name:'Remada',muscleGroup:'Costas',sets:2,reps:'10–12'}];
+const sets=[[{done:true},{done:true}],[{done:true},{done:false},{done:false}],[{done:false},{done:false}]];
+const progress=workoutPreviewProgress({exercises,sets,elapsedSeconds:14*60+45});
+document.getElementById('percent').textContent=progress.percent+'%';
+document.getElementById('progressFill').style.setProperty('--nf-progress',progress.percent+'%');
+document.getElementById('progress').setAttribute('aria-valuenow',String(progress.percent));
+document.getElementById('exerciseCount').textContent=progress.completedExercises+'/'+progress.totalExercises;
+document.getElementById('setCount').textContent=progress.completedSets+'/'+progress.totalSets;
+document.getElementById('elapsed').textContent=Math.floor(progress.elapsedSeconds/60)+' min';
+const pills=document.getElementById('exercisePills');
+exercises.forEach((exercise,index)=>{const el=document.createElement('span');el.className='nf-pill '+(sets[index].every(s=>s.done)?'done':index===1?'active':'');el.textContent=String(index+1);el.setAttribute('aria-label','Exercício '+(index+1)+': '+exercise.name);pills.appendChild(el)});
+const active=exercises[1];document.getElementById('exerciseTitle').textContent=active.name;document.getElementById('exerciseDescription').textContent=active.muscleGroup+' · '+active.sets+' séries · '+active.reps+' repetições';
+</script></body></html>

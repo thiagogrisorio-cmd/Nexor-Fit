@@ -1,0 +1,31 @@
+import test,{before,after} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {initializeTestEnvironment,assertSucceeds,assertFails} from '@firebase/rules-unit-testing';
+import {doc,getDoc,runTransaction,serverTimestamp} from 'firebase/firestore';
+import {startSession} from '../workout-session.js';
+import {createV2Workout} from '../session-v2-repository.js';
+import {finishV2Workout} from '../session-v2-finish.js';
+let env;
+before(async()=>{env=await initializeTestEnvironment({projectId:'demo-nexor-fit-v2-finish',firestore:{rules:readFileSync(new URL('../firestore.rules',import.meta.url),'utf8')}});});
+after(async()=>{if(env)await env.cleanup();});
+test('V2 finish commits completed status and clears active pointer in emulator',async()=>{
+ const uid='v2-finish-owner',sessionId='v2-finish-session';
+ const db=env.authenticatedContext(uid).firestore();
+ await assertSucceeds(createV2Workout({db,uid,session:startSession({id:sessionId,day:0,now:0}),doc,runTransaction,serverTimestamp}));
+ const result=await assertSucceeds(finishV2Workout({db,uid,sessionId,doc,runTransaction,serverTimestamp,now:1000}));
+ assert.equal(result.status,'completed');
+ const root=(await assertSucceeds(getDoc(doc(db,'users',uid,'sessions',sessionId)))).data();
+ const pointer=(await assertSucceeds(getDoc(doc(db,'users',uid,'sessionControl','active')))).data();
+ assert.equal(root.status,'completed');
+ assert.equal(root.durationSeconds,1);
+ assert.equal(pointer.sessionId,'');
+ await assert.rejects(finishV2Workout({db,uid,sessionId,doc,runTransaction,serverTimestamp,now:2000}),/não está ativa/);
+});
+test('V2 finish cannot operate on another user account',async()=>{
+ const owner='v2-finish-private',sessionId='v2-finish-private-session';
+ const db=env.authenticatedContext(owner).firestore();
+ await assertSucceeds(createV2Workout({db,uid:owner,session:startSession({id:sessionId,day:0,now:0}),doc,runTransaction,serverTimestamp}));
+ const other=env.authenticatedContext('v2-finish-stranger').firestore();
+ await assertFails(getDoc(doc(other,'users',owner,'sessions',sessionId)));
+});

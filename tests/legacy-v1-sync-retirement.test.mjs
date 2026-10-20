@@ -1,0 +1,46 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+const worker=readFileSync(new URL('../offline-sync-worker.js',import.meta.url),'utf8');
+const ui=readFileSync(new URL('../session-ui.js',import.meta.url),'utf8');
+test('retired V1 offline replay preserves pending operations without Firestore writes',()=>{
+ assert.match(worker,/legacy-v1-writes-retired/);
+ assert.match(worker,/synced:0/);
+ assert.doesNotMatch(worker,/runTransaction|removeOfflineOperation|tx\.set/);
+});
+test('V1 editing remains blocked at the session UI boundary',()=>{
+ assert.match(ui,/const v2PilotRequested=\(\)=>true/);
+ assert.match(ui,/if\(v2ReadOnly\|\|v2PilotRequested\(\)\)throw Error\('Gravação V1 bloqueada/);
+});
+
+test('legacy queue recovery requirement is visible without deleting local edits',()=>{
+ const status=readFileSync(new URL('../offline-status.js',import.meta.url),'utf8');
+ assert.match(status,/legacy-v1-writes-retired/);
+ assert.match(status,/Alterações antigas preservadas no dispositivo/);
+ assert.match(ui,/Reenvio V1 desativado por segurança; dados locais preservados para recuperação/);
+});
+
+test('V1 recovery export is read-only and account-scoped',()=>{
+ const recovery=readFileSync(new URL('../offline-v1-recovery-export.js',import.meta.url),'utf8');
+ const status=readFileSync(new URL('../offline-status.js',import.meta.url),'utf8');
+ assert.match(recovery,/pendingOfflineOperations\(uid\)/);
+ assert.match(recovery,/readOfflineWorkout\(uid,sessionId\)/);
+ assert.match(recovery,/uid!==getCurrentUid\(\)/);
+ assert.match(status,/getCurrentUid:\(\)=>auth\.currentUser\?\.uid/);
+ assert.doesNotMatch(recovery,/removeOfflineOperation|runTransaction|setDoc|updateDoc/);
+ assert.match(status,/buildLegacyV1RecoveryExport/);
+ assert.match(status,/Exportar recuperação V1/);
+});
+
+test('retired V1 queue never promises automatic synchronization',()=>{
+ const status=readFileSync(new URL('../offline-status.js',import.meta.url),'utf8');
+ assert.match(status,/V1 preservada\(s\), sem sincronização automática/);
+ assert.match(status,/Exporte o arquivo de recuperação antes de limpar os dados/);
+ assert.doesNotMatch(status,/alteração\(ões\) offline aguardando sincronização/);
+});
+
+test('V1 export requires a live account identity provider, never a self-authorized default',()=>{
+ const recovery=readFileSync(new URL('../offline-v1-recovery-export.js',import.meta.url),'utf8');
+ assert.match(recovery,/typeof getCurrentUid!=='function'/);
+ assert.doesNotMatch(recovery,/getCurrentUid=\(\)=>uid/);
+});

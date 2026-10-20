@@ -6,7 +6,7 @@ const el = id => document.getElementById(id);
 export function connectSync(adapter) {
   let user = null, generation = 0, ready = false, busy = false, failed = false;
   let unsubscribers = [], workouts = {}, history = [], received = new Set();
-  function lock() { el('workoutApp').inert = !!user && (!ready || busy || failed || !navigator.onLine); el('workoutApp').setAttribute('aria-busy',String(!!user && (!ready || busy))); }
+  function lock() { el('workoutApp').inert = !!user && (!ready || busy || failed); el('workoutApp').setAttribute('aria-busy',String(!!user && (!ready || busy))); }
   function refreshStatus() {
     lock();
     if(!user) {status('Modo local: registros salvos apenas neste navegador.');return;}

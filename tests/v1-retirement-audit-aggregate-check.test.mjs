@@ -1,0 +1,50 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {assertAggregateReport} from '../functions/audit-aggregate-check.js';
+const valid=()=>({readOnly:true,counts:{total:0,v1Active:0,v1Completed:0,v2Active:0,v2Completed:0,unknown:0},orphanAudit:{ownersScanned:0,orphanOwners:0,sessionDocuments:0},complete:true,readyForReview:true,blockers:[]});
+test('accepts exact aggregated report',()=>assert.equal(assertAggregateReport(valid()).readOnly,true));
+test('rejects extra fields and personally identifying data',()=>{
+ assert.throws(()=>assertAggregateReport({...valid(),uid:'private'}),/Invalid/);
+ assert.throws(()=>assertAggregateReport({...valid(),counts:{...valid().counts,email:'private'}}),/Invalid/);
+ assert.throws(()=>assertAggregateReport({...valid(),orphanAudit:{...valid().orphanAudit,userIds:['private']}}),/Invalid/);
+});
+test('rejects inconsistent totals, invalid blockers and false readiness',()=>{
+ assert.throws(()=>assertAggregateReport({...valid(),counts:{...valid().counts,total:1}}),/Invalid/);
+ assert.throws(()=>assertAggregateReport({...valid(),blockers:['unknown']}),/Invalid/);
+ assert.throws(()=>assertAggregateReport({...valid(),complete:false}),/Missing incomplete blocker/);
+});
+
+test('rejects reports concealing mandatory risk blockers',()=>{
+ const base=valid();
+ assert.throws(()=>assertAggregateReport({...base,counts:{...base.counts,total:1,v1Active:1},readyForReview:false}),/Missing required blockers/);
+ assert.throws(()=>assertAggregateReport({...base,counts:{...base.counts,total:1,unknown:1},readyForReview:false}),/Missing required blockers/);
+ assert.throws(()=>assertAggregateReport({...base,orphanAudit:{ownersScanned:1,orphanOwners:1,sessionDocuments:1},readyForReview:false}),/Missing required blockers/);
+ assert.throws(()=>assertAggregateReport({...base,complete:false,readyForReview:false}),/Missing incomplete blocker/);
+ assert.equal(assertAggregateReport({...base,counts:{...base.counts,total:1,v1Active:1},blockers:['v1-active-sessions'],readyForReview:false}).readOnly,true);
+});
+
+test('readiness must exactly match completeness and absence of blockers',()=>{
+ const base=valid();
+ assert.throws(()=>assertAggregateReport({...base,readyForReview:false}),/Invalid readiness/);
+ assert.throws(()=>assertAggregateReport({...base,blockers:['invalid-session-paths'],readyForReview:true}),/Invalid readiness/);
+ assert.equal(assertAggregateReport({...base,blockers:['invalid-session-paths'],readyForReview:false}).readyForReview,false);
+ assert.equal(assertAggregateReport({...base,complete:false,blockers:['inventory-incomplete'],readyForReview:false}).readyForReview,false);
+});
+
+test('rejects fabricated blockers inconsistent with aggregate counts',()=>{
+ const base=valid();
+ for(const blocker of ['v1-active-sessions','unknown-session-schema','orphan-session-owners']){
+  assert.throws(()=>assertAggregateReport({...base,blockers:[blocker],readyForReview:false}),/Invalid count blockers/);
+ }
+ for(const blocker of ['inventory-incomplete','orphan-audit-incomplete']){
+  assert.throws(()=>assertAggregateReport({...base,blockers:[blocker],readyForReview:false}),/Invalid incomplete blockers/);
+ }
+ assert.equal(assertAggregateReport({...base,complete:false,blockers:['orphan-audit-incomplete'],readyForReview:false}).complete,false);
+});
+
+test('rejects owner totals exceeding document and owner bounds',()=>{
+ const base=valid();
+ assert.throws(()=>assertAggregateReport({...base,orphanAudit:{ownersScanned:2,orphanOwners:0,sessionDocuments:1}}),/Invalid orphan count/);
+ assert.throws(()=>assertAggregateReport({...base,orphanAudit:{ownersScanned:1,orphanOwners:2,sessionDocuments:2}}),/Invalid orphan count/);
+ assert.equal(assertAggregateReport({...base,orphanAudit:{ownersScanned:1,orphanOwners:0,sessionDocuments:2}}).readOnly,true);
+});
