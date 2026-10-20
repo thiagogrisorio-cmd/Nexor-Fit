@@ -1,0 +1,17 @@
+/* High-fidelity visual correction for login/home only. Isolated from legacy index.html. */
+:root{--nf-orange:#ff851b;--nf-bg:#050607;--nf-card:#15191f}
+.nf-polished{font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:-.015em}
+.nf-polished .nf-brand{font-size:25px;letter-spacing:-.06em}
+.nf-polished .nf-heading{font-size:clamp(32px,9vw,42px);font-weight:900;line-height:1.04;letter-spacing:-.055em}
+.nf-polished .nf-card{background:#14181f;border:1px solid #292e37;border-radius:22px;box-shadow:0 12px 36px #0004}
+.nf-polished .nf-button{min-height:54px;border-radius:14px;font-weight:850}
+.nf-polished .nf-subtitle{font-size:15px}
+.nf-polished .nf-tabs{background:#101318;border-top:1px solid #2c3038}
+.nf-polished .nf-tab{font-size:11px}
+.nf-polished .nf-tab-icon{display:block;font-size:21px;line-height:1.3;margin-bottom:2px}
+.nf-polished .nf-preview-label{color:#818894;font-size:10px;text-transform:uppercase;letter-spacing:.1em}
+.nf-polished .nf-hero-photo{position:relative;isolation:isolate;overflow:hidden;border-radius:22px;background:radial-gradient(ellipse at 70% 25%,#aa471a66,transparent 48%),linear-gradient(130deg,#252a30,#0c0e11);min-height:280px}
+.nf-polished .nf-hero-photo::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,#050607e8,transparent 85%)}
+.nf-polished .nf-stat strong{font-size:23px;color:#fff}
+.nf-polished .nf-stat small{line-height:1.4}
+@media(max-width:360px){.nf-polished .nf-heading{font-size:32px}.nf-polished .nf-tabs{padding-inline:2px}.nf-polished .nf-tab{font-size:10px}}
