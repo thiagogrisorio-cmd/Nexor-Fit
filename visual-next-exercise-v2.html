@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#050607"><title>NEXOR FIT 2.0 — Próximo exercício (prévia)</title><link rel="stylesheet" href="./nexor-visual-v2.css"><style>body{margin:0;background:#050607}.nf-next{min-height:85dvh;display:flex;flex-direction:column;justify-content:center}.nf-next-visual{height:170px;display:grid;place-items:center;text-align:center;color:#a6abb5;background:linear-gradient(130deg,#272c34,#0b0e12);border:1px solid #343944;border-radius:15px;margin-bottom:18px}.nf-next .nf-button{width:100%;margin-top:20px}.nf-next-info{display:flex;justify-content:space-between;gap:12px;margin:12px 0;color:#a6abb5;font-size:13px}.nf-demo{font-size:12px;color:#a6abb5;margin:20px 0}.nf-message{min-height:20px;color:#ffb679}</style></head>
+<body><main class="nf-shell nf-next"><div class="nf-brand">NEXOR<span>FIT</span></div><p class="nf-demo">Prévia local com exercícios fictícios. Nenhuma sessão real é consultada ou modificada.</p><div class="nf-eyebrow" id="eyebrow">Próximo exercício</div><h1 class="nf-heading" id="heading">Carregando prévia...</h1><div class="nf-next-visual" role="img" aria-label="Espaço reservado para demonstração do próximo exercício">Demonstração visual a definir</div><section class="nf-card"><div class="nf-next-info"><span id="sets">—</span><span id="reps">—</span><span id="rest">—</span></div><div class="nf-progress" role="progressbar" aria-label="Progresso por exercícios" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progress"><span id="fill"></span></div><p class="nf-message" id="message" role="status"></p></section><a class="nf-button" href="./visual-exercise-v2.html" id="nextLink">Visualizar exercício →</a></main>
+<script type="module">
+import {assessExerciseTransition} from './nexor-visual-transition.js';
+const exercises=[{name:'Supino reto',sets:2,reps:'6–8',restSeconds:90},{name:'Agachamento livre',sets:3,reps:'8–10',restSeconds:120},{name:'Remada curvada',sets:2,reps:'10–12',restSeconds:90}];
+const sets=[[{done:true},{done:true}],[{done:false},{done:false},{done:false}],[{done:false},{done:false}]];
+const transition=assessExerciseTransition({exercises,sets,currentIndex:0});
+const link=document.getElementById('nextLink');
+if(transition.action==='next-exercise'){
+ document.getElementById('heading').textContent=transition.nextExercise.name;
+ document.getElementById('sets').textContent=transition.nextExercise.sets+' séries';
+ document.getElementById('reps').textContent=transition.nextExercise.reps+' repetições';
+ document.getElementById('rest').textContent=transition.nextExercise.restSeconds+' s de descanso';
+ const percent=Math.round(100*(transition.completedIndex+1)/exercises.length);
+ document.getElementById('fill').style.setProperty('--nf-progress',percent+'%');
+ document.getElementById('progress').setAttribute('aria-valuenow',String(percent));
+ document.getElementById('message').textContent='Exercício '+(transition.nextIndex+1)+' de '+exercises.length;
+ link.textContent='Ver prévia do exercício →';
+}else{document.getElementById('heading').textContent=transition.action==='workout-complete'?'Treino concluído!':'Confira as séries anteriores';document.getElementById('message').textContent='Não foi possível avançar nesta prévia.';link.hidden=true}
+</script></body></html>
