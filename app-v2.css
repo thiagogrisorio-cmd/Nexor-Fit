@@ -1,0 +1,19 @@
+/* Shared functional mobile layer: no demo data or preview dependencies. */
+.connection-status{padding:10px 14px;border:1px solid #3f382d;background:#1c1811;color:#ffb56c;border-radius:12px;font-size:12px;margin-bottom:18px}body:not(.nexor-authenticated) .connection-status{display:none}
+.confirm-action{max-width:min(92vw,460px);background:#151923;border:1px solid #6a4929;border-radius:18px;color:#fff;padding:24px}.confirm-action::backdrop{background:#000b}.confirm-action h2{font-size:20px;line-height:1.4}.confirm-action form{display:flex;justify-content:end;gap:12px;flex-wrap:wrap}
+[hidden]{display:none!important}
+.workspace-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:24px 0 16px}
+.workspace-heading h2{margin:0}.plan-toolbar{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
+.plan-toolbar label,.plan-editor label,.evolution-filters label{display:grid;gap:6px;color:#b8bdc9;font-size:13px}
+.plan-toolbar select,.plan-editor input,.evolution-filters select{width:100%;background:#0b0e13;border:1px solid #464b56;color:#f7f7f8;border-radius:10px;padding:12px;min-height:44px;font:inherit}
+.plan-editor{padding:20px;border:1px solid #734619;border-radius:18px;background:#141820;margin:20px 0}
+.plan-editor fieldset{display:grid;grid-template-columns:1fr 2fr 1fr;gap:12px;border:1px solid #343944;border-radius:12px;margin:14px 0;padding:16px}
+.plan-editor legend{color:#ff9b43;font-size:13px;padding:0 8px}.editor-actions{position:sticky;bottom:90px;display:flex;gap:10px;background:#141820;padding:12px 0;z-index:2}
+.evolution-filters{display:grid;grid-template-columns:1fr 2fr;gap:12px;margin:20px 0}
+.load-chart{display:flex;align-items:end;gap:12px;overflow-x:auto;min-height:210px;padding:16px 8px;border-bottom:1px solid #3c4350}
+.load-bar{display:flex;flex:1;min-width:54px;align-items:center;flex-direction:column;justify-content:end;gap:10px;font-size:12px}
+.load-bar div{width:100%;max-width:48px;background:linear-gradient(#ffac56,#ff7c12);border-radius:8px 8px 0 0}.load-bar small{color:#a9afbc}
+.load-table{width:100%;border-collapse:collapse;margin-top:20px;text-align:left;font-size:14px}.load-table td,.load-table th{padding:12px;border-bottom:1px solid #303642}.load-table caption{text-align:left;color:#b9bfcc;padding:10px}
+.btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #ffd1a5;outline-offset:3px}
+@media(max-width:640px){.container{padding-bottom:112px}.plan-editor{padding:14px}.plan-editor fieldset{grid-template-columns:1fr;padding:12px}.evolution-filters{grid-template-columns:1fr}.plan-toolbar{display:grid;grid-template-columns:1fr}.plan-toolbar button{width:100%}.editor-actions .btn{flex:1}.dock button{min-height:58px;font-size:11px}.workspace-heading{align-items:start}.session-exercise{padding:16px}.session-exercise-sets{gap:10px}.weight-controls button{min-width:44px;min-height:44px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

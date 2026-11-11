@@ -26,7 +26,7 @@ const errors = {
   'auth/unauthorized-domain': 'Este endereço ainda não está autorizado para login.',
   'auth/operation-not-allowed': 'Este método de login ainda não está habilitado.'
 };
-export function status(message) { el('syncStatus').textContent = message; }
+export function status(message) { el('syncStatus').textContent = message; const live=el('connectionStatus');if(live)live.textContent=message; }
 export function errorMessage(error) { return errors[error.code] || 'Não foi possível concluir. Tente novamente.'; }
 let pending = false;
 async function perform(action, success) {

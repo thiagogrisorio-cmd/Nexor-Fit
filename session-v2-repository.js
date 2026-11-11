@@ -1,4 +1,5 @@
 import {prepareV2SessionDocuments,joinSessionExercises} from './session-exercise-schema-v2.js';
+import {validatePrescription} from './training-prescription.js';
 
 /**
  * Transactional V2 creation, with active pointer check and 12 exercise writes.
@@ -9,6 +10,7 @@ export async function createV2Workout({db,uid,session,runTransaction,doc,serverT
  if(!uid||!session?.id||!db||!runTransaction||!doc||!serverTimestamp)
   throw Error('Parâmetros V2 incompletos');
  const {metadata,exercises}=prepareV2SessionDocuments(session);
+ if(session.prescription)metadata.prescription=validatePrescription(session.prescription);
  const root=doc(db,'users',uid,'sessions',session.id);
  const control=doc(db,'users',uid,'sessionControl','active');
  const refs=exercises.map(row=>doc(db,'users',uid,'sessions',session.id,'exercises',String(row.index)));

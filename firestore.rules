@@ -47,6 +47,17 @@ service cloud.firestore {
         && request.resource.data == resource.data;
     }
 
+
+    // Private fixed-size prescriptions; sessions retain immutable snapshots.
+    function validPrescriptionItem(value) { return value is string && value.size() <= 202 && value.matches('^[^|]{1,40}[|][^|]{1,120}[|][^|]{1,40}$'); }
+    function validPrescription(p) { return p is list && p.size() == 12 && validPrescriptionItem(p[0]) && validPrescriptionItem(p[1]) && validPrescriptionItem(p[2]) && validPrescriptionItem(p[3]) && validPrescriptionItem(p[4]) && validPrescriptionItem(p[5]) && validPrescriptionItem(p[6]) && validPrescriptionItem(p[7]) && validPrescriptionItem(p[8]) && validPrescriptionItem(p[9]) && validPrescriptionItem(p[10]) && validPrescriptionItem(p[11]); }
+    function validTrainingPlan(d) { return d.keys().hasAll(['revision','focus','exercises','updatedAt']) && d.keys().hasOnly(['revision','focus','exercises','updatedAt']) && d.revision is int && d.revision >= 1 && d.revision <= 1000000000 && d.focus is string && d.focus.size() >= 1 && d.focus.size() <= 120 && validPrescription(d.exercises) && d.updatedAt == request.time; }
+    match /users/{uid}/trainingPlans/{day} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && day.matches('^[0-3]$') && validTrainingPlan(request.resource.data) && request.resource.data.revision == 1;
+      allow update: if isOwner(uid) && day.matches('^[0-3]$') && validTrainingPlan(request.resource.data) && request.resource.data.revision == resource.data.revision + 1;
+    }
+
     function validSetEntry(s) {
       return s is map && s.keys().hasAll(['done','completedAt'])
         && s.keys().hasOnly(['done','completedAt','weightKg'])
@@ -69,7 +80,8 @@ service cloud.firestore {
         && sessionId.size() >= 1 && sessionId.size() <= 64
         && sessionId.matches('^[a-zA-Z0-9-]+$')
         && request.resource.data.keys().hasAll(['id','day','status','startedAt','restSeconds','updatedAt'])
-        && request.resource.data.keys().hasOnly(['id','day','status','startedAt','endedAt','durationSeconds','restSeconds','restUntil','sets','schemaVersion','updatedAt'])
+        && request.resource.data.keys().hasOnly(['id','day','status','startedAt','endedAt','durationSeconds','restSeconds','restUntil','sets','schemaVersion','updatedAt','prescription'])
+        && (!request.resource.data.keys().hasAny(['prescription']) || validPrescription(request.resource.data.prescription))
         && request.resource.data.id == sessionId
         && request.resource.data.day is int
         && request.resource.data.day >= 0 && request.resource.data.day <= 3
@@ -88,6 +100,7 @@ service cloud.firestore {
           || (resource.data.status == 'active'
               && request.resource.data.startedAt == resource.data.startedAt
               && request.resource.data.day == resource.data.day
+              && request.resource.data.get('prescription', null) == resource.data.get('prescription', null)
               && (!resource.data.keys().hasAny(['schemaVersion'])
                 || request.resource.data.schemaVersion == 2)
               && (request.resource.data.keys().hasAny(['schemaVersion']) == resource.data.keys().hasAny(['schemaVersion'])
