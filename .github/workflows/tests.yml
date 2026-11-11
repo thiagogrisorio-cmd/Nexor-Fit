@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, feature/workout-sessions-v1]
   push:
-    branches: [feature/workout-sessions-v1]
+    branches: [feature/workout-sessions-v1, codex/continue-v2]
 permissions:
   contents: read
 jobs:
