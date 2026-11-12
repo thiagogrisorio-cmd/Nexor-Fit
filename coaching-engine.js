@@ -1,3 +1,4 @@
+import {buildResistanceWeek,estimateSessionMinutes} from './resistance-week.js';
 import {normalizeEnvironment,equipmentForDay,dayEnvironment} from './cardio-model.js';
 import {EXERCISES,EQUIPMENT,exerciseById,eligible,compatibleExercises} from './coaching-catalog.js';
 export const LEVELS={basic:'Básico',intermediate:'Intermediário',advanced:'Avançado'};
@@ -6,11 +7,12 @@ export const FOCUSES={balanced:'Corpo todo',legs:'Pernas',glutes:'Glúteos',ches
 export function validateProfile(p){
  p=normalizeEnvironment(p);
  if(!p||!LEVELS[p.level]||!GOALS[p.goal]||!FOCUSES[p.focus]||p.adult!==true||!Number.isInteger(p.days)||p.days<2||p.days>6||![20,30,45,60,75].includes(p.minutes)||!Array.isArray(p.equipment)||p.equipment.length>Object.keys(EQUIPMENT).length||new Set(p.equipment).size!==p.equipment.length||p.equipment.some(e=>!EQUIPMENT[e]))throw Error('Revise o perfil: nível, objetivo, dias, tempo e equipamentos disponíveis.');
- return {level:p.level,goal:p.goal,focus:p.focus,adult:true,days:p.days,minutes:p.minutes,equipment:[...p.equipment].sort(),...(p.environment?{environment:p.environment,gymDays:p.gymDays,cardioLevel:p.cardioLevel,cardioMinutes:p.cardioMinutes}:{})};
+ return {level:p.level,goal:p.goal,focus:p.focus,adult:true,days:p.days,minutes:p.minutes,equipment:[...p.equipment].sort(),...(p.environment?{environment:p.environment,gymDays:p.gymDays,cardioLevel:p.cardioLevel,cardioMinutes:p.cardioMinutes,...(p.plannerVersion===2?{plannerVersion:2}:{})}:{})};
 }
 export const estimateMinutes=exercises=>Math.ceil(5+exercises.reduce((s,e)=>s+e.sets*(e.reps*3+e.restSeconds)+45,0)/60);
 export function generateProgram(raw,{variation=0}={}){
- const profile=validateProfile(raw);
+ const profile=validateProfile(raw?.environment?{...raw,plannerVersion:2}:raw);
+ if(profile.plannerVersion===2)return {profile,days:buildResistanceWeek(profile)};
  const full=profile.days<=3||profile.environment==='hybrid';
  const rep=profile.goal==='endurance'?15:profile.goal==='strength'?6:profile.goal==='muscle'?10:12;
  const rest=profile.goal==='strength'?(profile.minutes<=30?90:120):profile.goal==='endurance'?45:75;
@@ -47,7 +49,9 @@ export function replaceExercise(program,day,index,newId){
  const excluded=copy.days[day].exercises.map(e=>e.id);
  const dailyProfile={...copy.profile,equipment:equipmentForDay(copy.profile,day)};
  if(!compatibleExercises(row.id,dailyProfile,excluded).some(e=>e.id===newId))throw Error('Substituição incompatível com o movimento, nível ou equipamentos.');
- row.id=newId;return copy;
+ row.id=newId;
+ if(copy.profile.plannerVersion===2){const minutes=estimateSessionMinutes(copy.days[day].exercises);if(minutes>copy.profile.minutes)throw Error('Esta alternativa exige mais tempo para executar os dois lados. Escolha outra ou aumente o tempo no perfil.');copy.days[day].estimatedMinutes=minutes;}
+ return copy;
 }
 export function reviewStatus(program,now=Date.now()){
  const created=program?.createdAt?.toMillis?.()??Date.parse(program?.createdAt);
@@ -57,9 +61,11 @@ export function reviewStatus(program,now=Date.now()){
 }
 export function validateProgram(p){
  const profile=validateProfile(p.profile);if(!Array.isArray(p.days)||p.days.length!==profile.days)throw Error('Dias da ficha inválidos.');
- for(const [dayIndex,day] of p.days.entries()){if(!day.name||day.name.length>80||!Array.isArray(day.exercises)||day.exercises.length<2||day.exercises.length>6||new Set(day.exercises.map(e=>e.id)).size!==day.exercises.length)throw Error('Ficha inválida.');for(const e of day.exercises)if(!exerciseById(e.id)||!eligible(exerciseById(e.id),{...profile,equipment:equipmentForDay(profile,dayIndex)})||!Number.isInteger(e.sets)||e.sets<2||e.sets>4||!Number.isInteger(e.reps)||e.reps<6||e.reps>20||!Number.isInteger(e.restSeconds)||e.restSeconds<0||e.restSeconds>180)throw Error('Exercício inválido.');if(day.estimatedMinutes!==estimateMinutes(day.exercises)||day.estimatedMinutes>profile.minutes)throw Error('Duração incompatível com o perfil.');}
+ for(const [dayIndex,day] of p.days.entries()){if(!day.name||day.name.length>80||!Array.isArray(day.exercises)||day.exercises.length<2||day.exercises.length>6||new Set(day.exercises.map(e=>e.id)).size!==day.exercises.length)throw Error('Ficha inválida.');for(const e of day.exercises)if(!exerciseById(e.id)||!eligible(exerciseById(e.id),{...profile,equipment:equipmentForDay(profile,dayIndex)})||!Number.isInteger(e.sets)||e.sets<2||e.sets>4||!Number.isInteger(e.reps)||e.reps<6||e.reps>20||!Number.isInteger(e.restSeconds)||e.restSeconds<0||e.restSeconds>180)throw Error('Exercício inválido.');if(day.estimatedMinutes!==(profile.plannerVersion===2?estimateSessionMinutes(day.exercises):estimateMinutes(day.exercises))||day.estimatedMinutes>profile.minutes)throw Error('Duração incompatível com o perfil.');}
  return {profile,days:structuredClone(p.days)};
 }
 
 export const encodeProgramDays=days=>days.map(d=>({...d,exerciseCount:d.exercises.length,exercises:d.exercises.map(e=>[e.id,e.sets,e.reps,e.restSeconds].join('|')).join(';')}));
 export const decodeProgramDays=days=>days.map(d=>{const {exerciseCount,...rest}=d;return{...rest,exercises:d.exercises.split(';').map(value=>{const [id,sets,reps,restSeconds]=value.split('|');return{id,sets:Number(sets),reps:Number(reps),restSeconds:Number(restSeconds)};})};});
+
+export function replacementChoices(program,day,index){const row=program.days[day]?.exercises[index];if(!row)return[];return compatibleExercises(row.id,{...program.profile,equipment:equipmentForDay(program.profile,day)},program.days[day].exercises.map(e=>e.id)).filter(e=>{if(program.profile.plannerVersion!==2)return true;const rows=program.days[day].exercises.map((r,i)=>i===index?{...r,id:e.id}:r);return estimateSessionMinutes(rows)<=program.profile.minutes;});}
