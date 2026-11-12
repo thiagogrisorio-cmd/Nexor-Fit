@@ -446,13 +446,19 @@ function render(){
 }
 export function initSessionUI(getDay){
  window.nexorActiveDay=getDay;
+ $('restMinutes').onchange=()=>{
+  const atLimit=Number($('restMinutes').value)===10;
+  if(atLimit)$('restSeconds').value='0';
+  $('restSeconds').disabled=atLimit;
+ };
  $('startSession').onclick=async()=>{
   if(!ready||saving||v2ReadOnly||window.nexorTrainingPlansReady!==true)return;
   if(session?.status==='active'){alert('Conclua seu treino em andamento antes de iniciar outro.');return;}
   const minutes=Number($('restMinutes').value);
-  if(!Number.isFinite(minutes)||minutes<0||minutes>10){alert('Escolha entre 0 e 10 minutos.');return;}
+  const seconds=Number($('restSeconds').value),restSeconds=minutes*60+seconds;
+  if(!Number.isInteger(minutes)||!Number.isInteger(seconds)||minutes<0||seconds<0||seconds>59||restSeconds>600){alert('Escolha um descanso de até 10 minutos.');return;}
   try{
-   const next=startSession({day:getDay(),restSeconds:Math.round(minutes*60)});
+   const next=startSession({day:getDay(),restSeconds});
    const pilotRequested=v2PilotRequested();
    const pilot=v2PilotEnabled();
    if(pilotRequested&&!pilot){alert('Piloto V2 indisponível sem conexão ou autenticação válida. Nenhuma sessão V1 será criada.');return;}
