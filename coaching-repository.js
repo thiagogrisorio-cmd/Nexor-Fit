@@ -1,3 +1,4 @@
+import {equipmentForDay} from './cardio-model.js';
 import {compatibleExercises} from './coaching-catalog.js';
 export function encodeCoachedSession(s){return{...s,prescription:encodeProgramDays([s.prescription])[0],sets:s.sets.map(r=>({count:r.items.length,items:r.items.map(e=>[e.done?'1':'0',e.completedAt??'',e.weightKg??''].join('|')).join(';')}))};}
 export function decodeCoachedSession(s){return{...s,prescription:{...s.prescription,exercises:decodeProgramDays([s.prescription])[0].exercises},sets:s.sets.map(r=>({items:r.items.split(';').map(v=>{const [done,at,weight]=v.split('|');return{done:done==='1',completedAt:at||null,weightKg:weight===''?null:Number(weight)};})}))};}
@@ -37,7 +38,7 @@ export async function swapCoachedExercise({db,uid,id,exerciseIndex,newId,scope,e
  const session=decodeCoachedSession(snap.data()),program=validateProgram({...p.data(),days:decodeProgramDays(p.data().days)});
  if(session.revision!==expectedRevision||p.data().revision!==expectedPlanRevision)throw Error('Dados alterados em outro aparelho. Confira e tente novamente.');
  if(!['session','future'].includes(scope))throw Error('Escolha a duração da troca.');
- const current=session.exerciseIds[exerciseIndex];if(!compatibleExercises(current,program.profile,session.exerciseIds).some(e=>e.id===newId))throw Error('Exercício incompatível.');
+ const current=session.exerciseIds[exerciseIndex];if(!compatibleExercises(current,{...program.profile,equipment:equipmentForDay(program.profile,session.dayIndex)},session.exerciseIds).some(e=>e.id===newId))throw Error('Exercício incompatível.');
  const started=session.sets[exerciseIndex].items.some(s=>s.done);
  if(started&&scope==='session')throw Error('Esta série já tem registros. Para preservá-los, escolha a troca para os próximos treinos.');
  if(scope==='future'){

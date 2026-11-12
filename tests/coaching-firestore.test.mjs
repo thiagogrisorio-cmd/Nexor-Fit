@@ -61,3 +61,12 @@ test('persistent replacement updates the plan and never reassigns a performed se
  await swapCoachedExercise({db,uid,id,exerciseIndex:index,newId:original,scope:'future',expectedRevision:3,expectedPlanRevision:2,...deps});
  session=decodeCoachedSession((await getDoc(ref)).data());assert.equal(session.exerciseIds[index],candidate.id);assert.equal(session.sets[index].items[0].weightKg,12);assert.equal(decodeProgramDays((await getDoc(pRef)).data().days)[0].exercises[index].id,original);
 });
+test('environment profiles persist and cardio logs stay private, bounded and separate',async()=>{
+ const uid='cardio-owner',db=env.authenticatedContext(uid).firestore();
+ const p=generateProgram({...program.profile,days:6,minutes:75,level:'advanced',environment:'gym',gymDays:6,cardioLevel:'moderate',cardioMinutes:20});
+ await saveCoachingProgram({db,uid,program:p,expectedRevision:0,...deps});
+ const ref=doc(db,'users',uid,'cardioLogs','cardio-test'),value={mode:'stairs',environment:'gym',level:'moderate',minutes:8,dayIndex:3,performedAt:serverTimestamp()};
+ await assertSucceeds(setDoc(ref,value));await assertFails(getDoc(doc(env.authenticatedContext('cardio-other').firestore(),'users',uid,'cardioLogs','cardio-test')));await assertFails(updateDoc(ref,{minutes:30}));
+ await assertFails(setDoc(doc(db,'users',uid,'cardioLogs','bad-minutes'),{...value,minutes:121}));await assertFails(setDoc(doc(db,'users',uid,'cardioLogs','bad-home'),{...value,environment:'home'}));
+ await assertFails(updateDoc(doc(db,'users',uid,'coaching','current'),{profile:{...p.profile,environment:'hybrid',gymDays:6},revision:2,reviewedAt:serverTimestamp(),updatedAt:serverTimestamp()}));
+});

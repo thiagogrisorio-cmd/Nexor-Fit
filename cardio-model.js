@@ -1,0 +1,29 @@
+import {EQUIPMENT} from './coaching-catalog.js';
+export const ENVIRONMENTS={gym:'Academia',home:'Em casa',hybrid:'Híbrido'};
+export const CARDIO_LEVELS={none:'Não incluir',light:'Leve',moderate:'Moderado',advanced:'Avançado'};
+export const suggestedCardioMinutes=level=>({none:0,light:15,moderate:20,advanced:20}[level]??15);
+export function normalizeEnvironment(p){
+ if(!p.environment)return p;
+ if(!ENVIRONMENTS[p.environment]||!Number.isInteger(p.gymDays)||p.gymDays<0||p.gymDays>p.days||p.environment==='hybrid'&&(p.gymDays<1||p.gymDays>=p.days)||p.environment==='gym'&&p.gymDays!==p.days||p.environment==='home'&&p.gymDays!==0||!CARDIO_LEVELS[p.cardioLevel]||!Number.isInteger(p.cardioMinutes)||p.cardioMinutes<0||p.cardioMinutes>60||p.cardioLevel==='none'&&p.cardioMinutes!==0||p.cardioLevel!=='none'&&p.cardioMinutes<5)throw Error('Revise o ambiente, os dias em cada local e o tempo de aeróbico.');
+ return {...p,equipment:p.environment==='home'?[]:Object.keys(EQUIPMENT)};
+}
+export function dayEnvironment(p,index){if(!p.environment)return p.equipment.length?'gym':'home';if(p.environment!=='hybrid')return p.environment;return Math.floor((index+1)*p.gymDays/p.days)>Math.floor(index*p.gymDays/p.days)?'gym':'home';}
+export const equipmentForDay=(p,index)=>!p.environment?p.equipment:dayEnvironment(p,index)==='gym'?Object.keys(EQUIPMENT):[];
+const MODES={
+ treadmill:{name:'Esteira',use:'Prenda o clipe de segurança, comece com a lona lenta e olhe para a frente. Aumente velocidade ou inclinação em pequenos passos, conforme o esforço. Reduza antes de descer.',tip:'Você sabia? A inclinação pode aumentar o esforço na mesma velocidade. Ela não torna 15 minutos universalmente equivalentes a um tempo fixo de corrida. A cada 3 minutos, reavalie a respiração; só aumente um ajuste se continuar no esforço pretendido.',source:'https://www.nordictrack.com/blog/home-treadmill-training-burn-calories-incline-trainer'},
+ bike:{name:'Bicicleta ergométrica',use:'Ajuste o banco para que o joelho fique levemente flexionado quando o pedal estiver mais distante. Pedale com fluidez e aumente a resistência aos poucos.',tip:'Você sabia? Resistência e cadência influenciam o esforço. Não é necessário pedalar muito rápido: ajuste pela respiração e mantenha o quadril estável.',source:'https://www.cdc.gov/physicalactivity/basics/measuring/index.html'},
+ elliptical:{name:'Elíptico',use:'Suba com o equipamento parado, apoie os pés por inteiro e mantenha o tronco ereto. Comece com pouca resistência e coordene pernas e braços sem se pendurar nas manoplas.',tip:'Você sabia? Você pode ajustar a intensidade pela resistência, sem acelerar excessivamente. Mantenha o movimento controlado e a respiração compatível com sua escolha.',source:'https://www.cdc.gov/physicalactivity/basics/measuring/index.html'},
+ stairs:{name:'Escada ergométrica',use:'Confira o botão de parada, comece no nível baixo e suba um degrau por vez. Use os apoios para equilíbrio sem sustentar o peso do corpo nos braços. Pare o aparelho antes de descer.',tip:'Comece com 5–10 minutos e progrida conforme sua tolerância. Não há um limite universal de minutos seguro para todos. Não pule degraus nem suba de lado; diminua o ritmo se perder a postura. Se houver dor no peito, tontura, dor articular ou falta de ar incomum, pare o exercício.',source:'https://www.jdgyms.co.uk/news/how-to-use-the-stairmaster/'},
+ march:{name:'Marcha no lugar',use:'Em pé, marche elevando os pés em altura confortável e mova os braços naturalmente. Mantenha o tronco ereto e o chão livre de obstáculos.',tip:'Aumente o ritmo gradualmente, sem precisar saltar. A intensidade depende do seu condicionamento e da respiração.',source:'https://www.cdc.gov/physicalactivity/basics/measuring/index.html'},
+ steps:{name:'Passos laterais sem salto',use:'Dê um passo para o lado, aproxime o outro pé e repita para o lado oposto. Combine com movimentos dos braços e mantenha os joelhos relaxados.',tip:'Use um espaço plano e livre. Para reduzir o esforço, diminua a amplitude e a velocidade, em vez de perder o controle do movimento.',source:'https://www.onepeloton.com/classes/beginner-cardio?page=1'},
+ boxing:{name:'Boxe de sombra sem impacto',use:'Com os pés afastados e joelhos relaxados, faça socos alternados no ar sem travar os cotovelos. Movimente-se suavemente, sem saltos obrigatórios.',tip:'Faça intervalos leves quando necessário. Não segure pesos nas mãos para esta versão sem equipamentos.',source:'https://www.onepeloton.com/classes/beginner-cardio?page=1'}
+};
+export function cardioForDay(profile,index,rotation=0){
+ if(!profile.environment||profile.cardioLevel==='none')return null;
+ const env=dayEnvironment(profile,index),gymIndex=Array.from({length:index},(_,i)=>dayEnvironment(profile,i)).filter(e=>e===env).length;
+ const modes=env==='gym'?['treadmill','bike','elliptical','stairs']:['march','steps','boxing'];const mode=modes[(gymIndex+rotation)%modes.length];
+ const suggested=mode==='stairs'?Math.min(profile.cardioMinutes,{light:5,moderate:8,advanced:12}[profile.cardioLevel]):profile.cardioMinutes;
+ const effort={light:'Leve: respiração confortável, conversa fácil. Use este ritmo para começar e recuperar.',moderate:'Moderado: você consegue conversar, mas não cantar. Ajuste a velocidade ou resistência para manter esse esforço.',advanced:'Avançado: esforço vigoroso, falando apenas poucas palavras por vez. Use só se já está adaptado; intercale recuperação moderada, sem esforço máximo.'}[profile.cardioLevel];
+ return {mode,...MODES[mode],environment:env,minutes:suggested,level:profile.cardioLevel,effort};
+}
+export function cardioSummary(logs){return {sessions:logs.length,minutes:logs.reduce((sum,r)=>sum+r.minutes,0)};}
