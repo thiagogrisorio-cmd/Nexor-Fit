@@ -138,10 +138,11 @@ test('V2 workout progress uses session exercise completion after rest',()=>{
  assert.match(ui,/\$\('progressPct'\)\.textContent=percent\+'%'/);
  assert.match(ui,/\$\('progressCount'\)\.textContent=completeExercises/);
 });
-test('V2 exercise card embeds demonstration and per-exercise rest timer',()=>{
+test('V2 exercise card embeds demonstration and per-set rest timer',()=>{
  assert.match(ui,/const demoUrl='https:\/\/www\.youtube\.com\/results\?search_query='/);
  assert.match(ui,/class="session-exercise-tools"/);
- assert.match(ui,/data-rest-exercise/);
+ assert.match(ui,/data-rest-set/);
  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
  assert.match(html,/body\.nexor-authenticated #exerciseList\{display:none\}/);
 });
+

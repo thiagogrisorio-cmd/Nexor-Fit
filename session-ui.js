@@ -414,7 +414,7 @@ function render(){
  $('progressPct').textContent=percent+'%';$('progressBar').style.width=percent+'%';
  $('progressCount').textContent=completeExercises+' de '+session.sets.length+' exercícios concluídos';
  // Rest belongs to the exercise whose set was marked done, not to the whole workout.
- $('sessionRest').textContent='O descanso de cada exercício aparece no próprio cartão.';
+ $('sessionRest').textContent='O descanso começa ao marcar cada série como feita.';
  const legacyBlocked=!v2ReadOnly&&v2PilotRequested();
  const pilotEdit=v2ReadOnly&&v2PendingCount===0&&v2PilotEnabledOffline()&&!!uid&&(navigator.onLine||session.sets.some((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))));
  const offlineBaselineIndexes=v2ReadOnly&&uid?session.sets.map((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))):[];
@@ -429,18 +429,18 @@ function render(){
    const subtitle=typeof details==='string'?'':details.group+' · '+sets.length+' séries · '+details.reps+' repetições';
    const demoUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(title+' execução correta musculação');
    const safe=text=>String(text).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[char]));
-   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button><label class="set-weight">Carga série '+(j+1)+' (kg)<span class="weight-controls"><button type="button" data-weight-minus="'+i+'-'+j+'" aria-label="Diminuir carga">−</button><input aria-label="Carga em kg" type="number" min="0" max="2000" step="0.5" inputmode="decimal" data-set-weight="'+i+'-'+j+'" value="'+safe(weightDrafts.get(weightKey(session.id,i,j))??set.weightKg??'')+'" placeholder="Opcional"><button type="button" data-weight-plus="'+i+'-'+j+'" aria-label="Aumentar carga">+</button></span><small>Última vez: '+(previousWeights.has(weightKey(session.id,i,j))?safe(previousWeights.get(weightKey(session.id,i,j)))+' kg':'sem registro')+'</small>'+(weightFeedback.get(weightKey(session.id,i,j))?'<small class="weight-feedback">Parabéns, sua carga aumentou</small>':'')+'</label>').join('')+'</div><div class="session-exercise-tools"><a class="btn outline small" target="_blank" rel="noopener noreferrer" href="'+demoUrl+'">▶ Demonstração</a></div><p class="exercise-rest" data-rest-exercise="'+i+'" role="timer" aria-label="Descanso do exercício" hidden></p></article>';
+   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-tools"><a class="btn outline small" target="_blank" rel="noopener noreferrer" href="'+demoUrl+'">▶ Demonstração</a></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<section class="session-set"><label class="set-weight">Carga - série '+String(j+1).padStart(2,'0')+' (Kg)<span class="weight-controls"><button type="button" data-weight-minus="'+i+'-'+j+'" aria-label="Diminuir carga">−</button><input aria-label="Carga em kg" type="number" min="0" max="2000" step="0.5" inputmode="decimal" data-set-weight="'+i+'-'+j+'" value="'+safe(weightDrafts.get(weightKey(session.id,i,j))??set.weightKg??'')+'" placeholder="Opcional"><button type="button" data-weight-plus="'+i+'-'+j+'" aria-label="Aumentar carga">+</button></span><small>Última vez: '+(previousWeights.has(weightKey(session.id,i,j))?safe(previousWeights.get(weightKey(session.id,i,j)))+' kg':'sem registro')+'</small>'+(weightFeedback.get(weightKey(session.id,i,j))?'<small class="weight-feedback">Parabéns, sua carga aumentou</small>':'')+'</label><button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+String(j+1).padStart(2,'0')+' - '+(set.done?'Feito ✓':'Marcar como feito')+'</button><p class="set-rest exercise-rest" data-rest-set="'+i+'-'+j+'" role="timer" aria-label="Descanso da série '+String(j+1).padStart(2,'0')+'" hidden></p></section>').join('')+'</div></article>';
   };
   const pending=exercises.filter(row=>!row.complete),done=exercises.filter(row=>row.complete);
   $('sessionSetList').innerHTML='<h3>Exercícios em andamento ('+pending.length+')</h3>'+pending.map(buildExercise).join('')+(done.length?'<h3 class="section">Exercícios concluídos ('+done.length+')</h3>'+done.map(buildExercise).join(''):'');
  }
  // Update only countdown text every second; never recreate buttons while the user interacts.
- $('sessionSetList').querySelectorAll('[data-rest-exercise]').forEach(target=>{
-  const index=Number(target.dataset.restExercise);
-  const sets=session.sets[index];
-  const seconds=sets?exerciseRestSeconds(sets,session.restSeconds):0;
+ $('sessionSetList').querySelectorAll('[data-rest-set]').forEach(target=>{
+  const [exerciseIndex,setIndex]=target.dataset.restSet.split('-').map(Number);
+  const set=session.sets[exerciseIndex]?.[setIndex];
+  const seconds=set?exerciseRestSeconds([set],session.restSeconds):0;
   target.hidden=seconds===0;
-  target.textContent=seconds?'Descanso deste exercício: '+restfmt(seconds):'';
+  target.textContent=seconds?'Descanso da série '+String(setIndex+1).padStart(2,'0')+': '+restfmt(seconds):'';
  });
  $('finishSession').disabled=saving||offlineSaving||(v2ReadOnly&&!(v2PilotEnabled()&&!!uid&&navigator.onLine&&v2PendingCount===0))||legacyBlocked;
 }
@@ -530,3 +530,4 @@ export function initSessionUI(getDay){
  setInterval(render,1000);
  return {render,load};
 }
+
