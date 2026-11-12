@@ -420,7 +420,7 @@ function render(){
  $('progressPct').textContent=percent+'%';$('progressBar').style.width=percent+'%';
  $('progressCount').textContent=completeExercises+' de '+session.sets.length+' exercícios concluídos';
  // Rest belongs to the exercise whose set was marked done, not to the whole workout.
- $('sessionRest').textContent='O descanso começa ao marcar cada série como feita.';
+ $('sessionRest').textContent=session.restSeconds===0?'Contador de descanso desativado. Controle seu intervalo por conta própria.':'O descanso começa ao marcar cada série como feita.';
  const legacyBlocked=!v2ReadOnly&&v2PilotRequested();
  const pilotEdit=v2ReadOnly&&v2PendingCount===0&&v2PilotEnabledOffline()&&!!uid&&(navigator.onLine||session.sets.some((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))));
  const offlineBaselineIndexes=v2ReadOnly&&uid?session.sets.map((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))):[];
@@ -461,6 +461,9 @@ export function initSessionUI(getDay,{openWorkout,showWorkouts}={}){
  }
  $('resumeActiveSession').onclick=resume;
  window.nexorActiveDay=getDay;
+ $('noRestTimer').onchange=()=>{
+  $('restTimeFields').disabled=$('noRestTimer').checked;
+ };
  $('restMinutes').onchange=()=>{
   const atLimit=Number($('restMinutes').value)===10;
   if(atLimit)$('restSeconds').value='0';
@@ -470,7 +473,7 @@ export function initSessionUI(getDay,{openWorkout,showWorkouts}={}){
   if(!ready||saving||v2ReadOnly||window.nexorTrainingPlansReady!==true)return;
   if(session?.status==='active'){alert('Conclua seu treino em andamento antes de iniciar outro.');return;}
   const minutes=Number($('restMinutes').value);
-  const seconds=Number($('restSeconds').value),restSeconds=minutes*60+seconds;
+  const seconds=Number($('restSeconds').value),restSeconds=$('noRestTimer').checked?0:minutes*60+seconds;
   if(!Number.isInteger(minutes)||!Number.isInteger(seconds)||minutes<0||seconds<0||seconds>59||restSeconds>600){alert('Escolha um descanso de até 10 minutos.');return;}
   try{
    const next=startSession({day:getDay(),restSeconds});
