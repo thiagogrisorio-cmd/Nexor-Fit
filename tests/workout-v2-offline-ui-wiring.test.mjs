@@ -146,3 +146,11 @@ test('V2 exercise card embeds demonstration and per-set rest timer',()=>{
  assert.match(html,/body\.nexor-authenticated #exerciseList\{display:none\}/);
 });
 
+test('ongoing navigation resumes the active session instead of the last viewed workout',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ assert.match(html,/destination==='training'\)window\.nexorSessionUI\?\.resume\(\)/);
+ assert.doesNotMatch(html,/destination==='training'\)openWorkout\(active\)/);
+ assert.match(ui,/const day=activeWorkoutDay\(session\)/);
+ assert.match(ui,/if\(day!==null\)openWorkout\?\.\(day\)/);
+ assert.match(ui,/else if\(ready\)showWorkouts\?\.\(\)/);
+});

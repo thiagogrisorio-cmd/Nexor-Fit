@@ -1,3 +1,4 @@
+import {activeWorkoutDay} from './workout-card-state.js';
 import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
 import {exerciseIdentity} from './training-prescription.js';
 import {confirmAction} from './confirm-action.js';
@@ -404,7 +405,11 @@ function render(){
  $('sessionStartPanel').classList.toggle('hidden',!!current);
  if(session?.status==='active'&&!current)$('sessionMessage').textContent='Há um treino em andamento. Abra o Treino '+String.fromCharCode(65+session.day)+' para continuar.';
  else $('sessionMessage').textContent=v2Notice+(v2PendingCount?' '+v2PendingCount+' alteração(ões) V2 aguardando sincronização.':'');
- $('sessionStartPanel').querySelector('button').disabled=!ready||saving||v2ReadOnly||session?.status==='active'||window.nexorTrainingPlansReady!==true;
+ const resumeButton=$('resumeActiveSession');
+ resumeButton.hidden=!(session?.status==='active'&&!current);
+ resumeButton.disabled=saving||offlineSaving;
+ if(!resumeButton.hidden)resumeButton.textContent='Retomar Treino '+String.fromCharCode(65+session.day);
+ $('startSession').disabled=!ready||saving||v2ReadOnly||session?.status==='active'||window.nexorTrainingPlansReady!==true;
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
@@ -444,7 +449,16 @@ function render(){
  });
  $('finishSession').disabled=saving||offlineSaving||(v2ReadOnly&&!(v2PilotEnabled()&&!!uid&&navigator.onLine&&v2PendingCount===0))||legacyBlocked;
 }
-export function initSessionUI(getDay){
+export function initSessionUI(getDay,{openWorkout,showWorkouts}={}){
+ async function resume(){
+  const account=auth.currentUser?.uid;
+  if(!ready)await load();
+  if(account!==auth.currentUser?.uid)return;
+  const day=activeWorkoutDay(session);
+  if(day!==null)openWorkout?.(day);
+  else if(ready)showWorkouts?.();
+ }
+ $('resumeActiveSession').onclick=resume;
  window.nexorActiveDay=getDay;
  $('restMinutes').onchange=()=>{
   const atLimit=Number($('restMinutes').value)===10;
@@ -528,6 +542,5 @@ export function initSessionUI(getDay){
   if(document.visibilityState==='visible' && !saving)load();
  });
  setInterval(render,1000);
- return {render,load};
+ return {render,load,resume};
 }
-
