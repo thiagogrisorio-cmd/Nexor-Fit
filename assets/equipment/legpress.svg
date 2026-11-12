@@ -1,1 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 200"><rect width="280" height="200" rx="14" fill="#0b0e13"/><g fill="none" stroke="#aeb8c7" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"><path d="M35 175h205M65 150l120-115m-90 125L215 45M55 115l35 30h50M70 135v40m65-30v30M165 55l45 40"/><path d="M160 45l60 60" stroke="#ff9b43" stroke-width="14"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 200" role="img" aria-labelledby="title desc">
+ <title id="title">Máquina leg press 45 graus</title>
+ <desc id="desc">Banco reclinado na parte inferior esquerda, dois trilhos inclinados, carro com anilhas e plataforma para os pés na parte superior direita.</desc>
+ <rect width="280" height="200" rx="14" fill="#0b0e13"/>
+ <g stroke-linecap="round" stroke-linejoin="round">
+  <!-- Base and inclined guide rails. -->
+  <path d="M25 177h230M83 173 221 35M107 173 245 35M226 47l20 127M66 173h49M218 174h36" fill="none" stroke="#778596" stroke-width="7"/>
+  <path d="m99 160 118-118m-99 124 118-118" fill="none" stroke="#c5cfdb" stroke-width="3"/>
+  <!-- Sliding carriage and plate loading spindle. -->
+  <path d="m167 103 29 29 28-28-29-29z" fill="#26303e" stroke="#aeb8c7" stroke-width="3"/>
+  <path d="m193 108 41 17" fill="none" stroke="#aeb8c7" stroke-width="7"/>
+  <ellipse cx="221" cy="119" rx="13" ry="22" transform="rotate(-35 221 119)" fill="#1b2330" stroke="#aeb8c7" stroke-width="4"/>
+  <ellipse cx="230" cy="123" rx="8" ry="18" transform="rotate(-35 230 123)" fill="#222d3b" stroke="#aeb8c7" stroke-width="3"/>
+  <circle cx="230" cy="123" r="3" fill="#ffae61"/>
+  <!-- Large footplate, perpendicular to the guide rails. -->
+  <path d="m155 58 56 56-8 8-56-56z" fill="#ff9b43" stroke="#ffc18a" stroke-width="3"/>
+  <path d="m158 68 43 43m-48-38 43 43" stroke="#a95115" stroke-width="2"/>
+  <!-- Reclined backrest, seat and support. -->
+  <path d="M36 111 64 149h34m-45-14-9 39m43-23v23M29 174h70" fill="none" stroke="#aeb8c7" stroke-width="5"/>
+  <path d="m30 106 9-6 31 42-10 7z" fill="#374557" stroke="#c5cfdb" stroke-width="3"/>
+  <path d="M63 146h35v12H65z" fill="#374557" stroke="#c5cfdb" stroke-width="3"/>
+  <!-- Side hand grip and safety stop. -->
+  <path d="M77 161v-18h12m32 1 10 10" fill="none" stroke="#ff9b43" stroke-width="4"/>
+ </g>
+</svg>
