@@ -399,18 +399,22 @@ function render(){
  const overview={history:completedSessions.map(({id,day,endedAt})=>({id,day,endedAt})),completedCount:completedSessionCount,active:session?.status==='active'?{day:session.day,completedExercises:session.sets.filter(sets=>sets.every(set=>set.done)&&exerciseRestSeconds(sets,session.restSeconds)===0).length,totalExercises:session.sets.length}:null};
  const overviewKey=JSON.stringify(overview);if(overviewKey!==dashboardKey){dashboardKey=overviewKey;window.nexorSessionData=overview;window.dispatchEvent(new Event('nexor-sessions-changed'));}
  const history=$('sessionHistory');
- const historyKeyView=JSON.stringify(completedSessions.map(item=>[item.id,item.status,item.endedAt,item.completedSets]));
- if(history && renderedHistoryKey!==historyKeyView){renderedHistoryKey=historyKeyView;history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+(Number.isInteger(item.completedSets)?' · '+item.completedSets+' séries':item.schemaVersion===2?'':' · '+sessionProgress(item).done+' séries')+'</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';}
+ const displayHistory=[...completedSessions,...(window.nexorCoachState?.history||[]).map(s=>({...s,name:s.prescription.name,completedSets:s.sets.reduce((n,r)=>n+r.items.filter(x=>x.done).length,0),durationSeconds:Math.max(0,Math.floor((Date.parse(s.endedAt)-Date.parse(s.startedAt))/1000))}))].sort((a,b)=>String(b.endedAt).localeCompare(String(a.endedAt)));
+ const escapedHistory=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const historyKeyView=JSON.stringify(displayHistory.map(item=>[item.id,item.status,item.endedAt,item.completedSets]));
+ if(history && renderedHistoryKey!==historyKeyView){renderedHistoryKey=historyKeyView;history.innerHTML=displayHistory.slice(0,20).map(item=>'<div class="log"><b>'+escapedHistory(item.name||('Treino '+String.fromCharCode(65+item.day)))+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+(Number.isInteger(item.completedSets)?' · '+item.completedSets+' séries':item.schemaVersion===2?'':' · '+sessionProgress(item).done+' séries')+'</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';}
  const current=session?.status==='active'&&session.day===window.nexorActiveDay?.();
  panel.classList.toggle('hidden',!current);
  $('sessionStartPanel').classList.toggle('hidden',!!current);
  if(session?.status==='active'&&!current)$('sessionMessage').textContent='Há um treino em andamento. Abra o Treino '+String.fromCharCode(65+session.day)+' para continuar.';
  else $('sessionMessage').textContent=v2Notice+(v2PendingCount?' '+v2PendingCount+' alteração(ões) V2 aguardando sincronização.':'');
+ if(window.nexorCoach&&session?.status!=='active')$('sessionMessage').textContent='Para iniciar um novo treino, use sua ficha personalizada na aba Treinos.';
+ if(window.nexorCoachState?.activeId&&!current)$('sessionMessage').textContent='Há um treino da sua ficha personalizada em andamento. Use a aba Em andamento para retomar.';
  const resumeButton=$('resumeActiveSession');
  resumeButton.hidden=!(session?.status==='active'&&!current);
  resumeButton.disabled=saving||offlineSaving;
  if(!resumeButton.hidden)resumeButton.textContent='Retomar Treino '+String.fromCharCode(65+session.day);
- $('startSession').disabled=!ready||saving||v2ReadOnly||session?.status==='active'||window.nexorTrainingPlansReady!==true;
+ $('startSession').disabled=!!window.nexorCoach||!!window.nexorCoachState?.activeId||!ready||saving||v2ReadOnly||session?.status==='active'||window.nexorTrainingPlansReady!==true;
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
@@ -540,6 +544,7 @@ export function initSessionUI(getDay,{openWorkout,showWorkouts}={}){
  };
  window.addEventListener('nexor-v2-queue-changed',refreshV2PendingCount);
  window.addEventListener('nexor-plans-changed',render);
+ window.addEventListener('nexor-coach-changed',render);
  window.addEventListener('online',refreshV2PendingCount);
  onAuthStateChanged(auth,()=>{
   const accountUid=auth.currentUser?.uid||null;

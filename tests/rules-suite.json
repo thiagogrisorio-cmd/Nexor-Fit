@@ -1,4 +1,5 @@
 [
+  "tests/coaching-firestore.test.mjs",
   "tests/training-plans-firestore.test.mjs",
   "tests/dynamic-workout-immutable-revisions.test.mjs",
   "tests/dynamic-workout-child-exercises.test.mjs",
