@@ -27,3 +27,8 @@ test('equipment and attachment pictures exist for every default exercise',()=>{
  assert.match(exerciseGuide('Rosca martelo na corda').execution,/corda/);
  assert.match(exerciseGuide('Tríceps unilateral na polia').accessories,/alça individual/);
 });
+
+test('low pulley illustrations match the prescribed cable height',()=>{
+ for(const name of ['Rosca na polia baixa','Rosca martelo na corda','Elevação lateral na polia','Tríceps francês na polia'])assert.equal(exerciseGuide(name).kind,'cable-low',name);
+ for(const name of ['Tríceps barra reta na polia','Pulldown com braços estendidos'])assert.equal(exerciseGuide(name).kind,'cable',name);
+});
