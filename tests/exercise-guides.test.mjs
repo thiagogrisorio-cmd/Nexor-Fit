@@ -7,7 +7,7 @@ test('all 48 default prescription entries have complete technique guidance',()=>
  const days=JSON.parse(html.match(/const days=(\[.*\]);/)[1]);
  const names=days.flatMap(day=>day[2].map(item=>item.split('|')[1]));
  assert.equal(names.length,48);
- for(const name of names){const guide=exerciseGuide(name);assert.ok(guide,name);for(const key of ['muscles','execution','tip'])assert.ok(guide[key].trim().length>0,`${name}: ${key}`);}
+ for(const name of names){const guide=exerciseGuide(name);assert.ok(guide,name);for(const key of ['muscles','execution','tip','machine','accessories','setup','kind'])assert.ok(guide[key].trim().length>0,`${name}: ${key}`);}
 });
 test('custom names never reuse unrelated exercise instructions',()=>{
  assert.equal(exerciseGuide('Meu exercício novo'),null);
@@ -15,3 +15,15 @@ test('custom names never reuse unrelated exercise instructions',()=>{
  assert.deepEqual(exerciseGuide('  STIFF COM HALTERES '),exerciseGuide('Stiff com halteres'));
 });
 
+
+test('equipment and attachment pictures exist for every default exercise',()=>{
+ const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+ const days=JSON.parse(html.match(/const days=(\[.*\]);/)[1]);
+ for(const name of days.flatMap(day=>day[2].map(item=>item.split('|')[1]))){
+  const guide=exerciseGuide(name);
+  for(const kind of [guide.kind,guide.attachment].filter(Boolean))assert.match(readFileSync(new URL('../assets/equipment/'+kind+'.svg',import.meta.url),'utf8'),/<svg/);
+ }
+ assert.match(exerciseGuide('Tríceps barra V na polia').accessories,/Barra V/);
+ assert.match(exerciseGuide('Rosca martelo na corda').execution,/corda/);
+ assert.match(exerciseGuide('Tríceps unilateral na polia').accessories,/alça individual/);
+});
