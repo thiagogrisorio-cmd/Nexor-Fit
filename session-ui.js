@@ -394,11 +394,11 @@ function exerciseRestSeconds(sets,restSeconds,now=Date.now()){
 }
 function render(){
  const panel=$('sessionPanel');if(!panel)return;
- const overview={history:completedSessions.map(({id,day,endedAt})=>({id,day,endedAt})),completedCount:completedSessionCount};
+ const overview={history:completedSessions.map(({id,day,endedAt})=>({id,day,endedAt})),completedCount:completedSessionCount,active:session?.status==='active'?{day:session.day,completedExercises:session.sets.filter(sets=>sets.every(set=>set.done)&&exerciseRestSeconds(sets,session.restSeconds)===0).length,totalExercises:session.sets.length}:null};
  const overviewKey=JSON.stringify(overview);if(overviewKey!==dashboardKey){dashboardKey=overviewKey;window.nexorSessionData=overview;window.dispatchEvent(new Event('nexor-sessions-changed'));}
  const history=$('sessionHistory');
  const historyKeyView=JSON.stringify(completedSessions.map(item=>[item.id,item.status,item.endedAt,item.completedSets]));
- if(history && renderedHistoryKey!==historyKeyView){renderedHistoryKey=historyKeyView;history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+' · '+(Number.isInteger(item.completedSets)?item.completedSets:(item.schemaVersion===2?'—':sessionProgress(item).done))+' séries</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';}
+ if(history && renderedHistoryKey!==historyKeyView){renderedHistoryKey=historyKeyView;history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+(Number.isInteger(item.completedSets)?' · '+item.completedSets+' séries':item.schemaVersion===2?'':' · '+sessionProgress(item).done+' séries')+'</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';}
  const current=session?.status==='active'&&session.day===window.nexorActiveDay?.();
  panel.classList.toggle('hidden',!current);
  $('sessionStartPanel').classList.toggle('hidden',!!current);

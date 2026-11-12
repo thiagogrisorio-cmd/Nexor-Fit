@@ -8,7 +8,7 @@
 .plan-toolbar select,.plan-editor input,.evolution-filters select{width:100%;background:#0b0e13;border:1px solid #464b56;color:#f7f7f8;border-radius:10px;padding:12px;min-height:44px;font:inherit}
 .plan-editor{padding:20px;border:1px solid #734619;border-radius:18px;background:#141820;margin:20px 0}
 .plan-editor fieldset{display:grid;grid-template-columns:1fr 2fr 1fr;gap:12px;border:1px solid #343944;border-radius:12px;margin:14px 0;padding:16px}
-.plan-editor legend{color:#ff9b43;font-size:13px;padding:0 8px}.editor-actions{position:sticky;bottom:90px;display:flex;gap:10px;background:#141820;padding:12px 0;z-index:2}
+.plan-editor legend{color:#ff9b43;font-size:13px;padding:0 8px}.editor-actions{position:sticky;bottom:calc(112px + env(safe-area-inset-bottom));display:flex;gap:10px;background:#141820;padding:12px 0;z-index:2}
 .evolution-filters{display:grid;grid-template-columns:1fr 2fr;gap:12px;margin:20px 0}
 .load-chart{display:flex;align-items:end;gap:12px;overflow-x:auto;min-height:210px;padding:16px 8px;border-bottom:1px solid #3c4350}
 .load-bar{display:flex;flex:1;min-width:54px;align-items:center;flex-direction:column;justify-content:end;gap:10px;font-size:12px}

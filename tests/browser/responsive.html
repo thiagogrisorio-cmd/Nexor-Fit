@@ -1,0 +1,12 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Nexor-Fit — QA responsivo local</title>
+<style>body{margin:0;background:#080b10;color:#ddd;font:14px system-ui}main{margin:16px;width:max-content}p{margin:0 0 12px}iframe{display:block;border:1px solid #454b57;border-radius:12px;height:844px;background:#080808}</style>
+<main><p id="label">Verificação responsiva disponível somente em localhost.</p></main>
+<script>
+if(['localhost','127.0.0.1','[::1]'].includes(location.hostname)){
+ const requested=Number(new URLSearchParams(location.search).get('width'));
+ const width=[320,390,768].includes(requested)?requested:390;
+ const frame=document.createElement('iframe');frame.title='Nexor-Fit em viewport de '+width+' pixels';frame.id='mobileApp';frame.style.width=width+'px';
+ frame.src=new URL('../../index.html?nexorEmulators=1',location.href).href;
+ document.getElementById('label').textContent='QA local · viewport CSS de '+width+' × 844 · dados do emulador';document.querySelector('main').append(frame);
+}
+</script></html>

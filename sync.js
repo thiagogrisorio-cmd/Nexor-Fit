@@ -1,6 +1,7 @@
 import { getFirestore, collection, doc, onSnapshot, query, orderBy, runTransaction, Timestamp, serverTimestamp, writeBatch } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { app, auth, connectAccount, status } from './auth.js';
 import { freshWorkout, changeWorkout, legacyWorkout } from './state.js';
+import {confirmAction} from './confirm-action.js';
 const db = getFirestore(app);
 const el = id => document.getElementById(id);
 export function connectSync(adapter) {
@@ -9,7 +10,7 @@ export function connectSync(adapter) {
   function lock() { el('workoutApp').inert = !!user && (!ready || busy || failed); el('workoutApp').setAttribute('aria-busy',String(!!user && (!ready || busy))); }
   function refreshStatus() {
     lock();
-    if(!user) {status('Modo local: registros salvos apenas neste navegador.');return;}
+    if(!user) {status('Entre para acessar suas fichas. Registros anteriores deste navegador continuam preservados.');return;}
     if(failed) {status('A sincronização falhou. Suas alterações não foram salvas. Recarregue a página para tentar novamente.');return;}
     status(!navigator.onLine ? 'Sem conexão. Reconecte para registrar alterações na conta.' : !ready ? 'Carregando seus registros…' : busy ? 'Salvando na sua conta…' : 'Sincronizado com sua conta.');
   }
@@ -73,7 +74,9 @@ export function connectSync(adapter) {
     }
   };
   el('importLegacy').onclick=async()=>{
-    if(!confirm('Importar os registros antigos deste navegador para a conta conectada? O progresso atual da conta será preservado.'))return;
+    const account=user?.uid;if(!account)return;
+    if(!await confirmAction('Importar os registros antigos deste navegador para a conta conectada? O progresso atual da conta será preservado.',{confirmLabel:'Importar registros'}))return;
+    if(user?.uid!==account||auth.currentUser?.uid!==account)return;
     await perform(async uid=>{
       const legacy=adapter.legacy();
       for(let day=0;day<4;day++)await runTransaction(db,async transaction=>{

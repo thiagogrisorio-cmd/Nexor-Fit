@@ -43,7 +43,7 @@ export function initLoadEvolution({defaults}){
     const caption=document.createElement('small');caption.textContent=date;bar.append(label,column,caption);$('evolutionChart').append(bar);
     const tr=document.createElement('tr');for(const text of [new Date(row.at).toLocaleDateString('pt-BR'),row.weight+' kg']){const td=document.createElement('td');td.textContent=text;tr.append(td);}$('evolutionRows').append(tr);
    });
-   $('evolutionStatus').textContent=trend.length+' sessão(ões) com carga. Maior carga das séries concluídas; consulta limitada às 50 sessões recentes e aos últimos 12 treinos correspondentes.';
+   $('evolutionStatus').textContent='Sessões com carga: '+trend.length+'. Maior carga das séries concluídas; consulta limitada às 50 sessões recentes e aos últimos 12 treinos correspondentes.';
   }catch{if(token===generation)clear('Não foi possível consultar sua evolução. Tente novamente.');}
  }
  $('evolutionDay').onchange=()=>{choices();load();};$('evolutionExercise').onchange=load;$('refreshEvolution').onclick=load;

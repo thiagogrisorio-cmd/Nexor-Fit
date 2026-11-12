@@ -15,17 +15,20 @@ Base: `feature/workout-sessions-v1` em `72410fd`. Produção e dados reais não 
 
 ## Verificação
 
-- Testes unitários existentes e novos aprovados; testes de política de emuladores aprovados.
+- 299 testes unitários aprovados; 3 testes de política de emuladores aprovados.
 - 65 testes de regras aprovados no emulador, incluindo negação entre contas, validação de todas as posições, revisão obsoleta e snapshot imutável.
 - 6 testes administrativos de integração aprovados nos emuladores de Auth/Firestore. Pacote de Functions carregado com sucesso; nenhuma Function foi implantada.
 - Navegador: cadastro local, edição da ficha, persistência após recarregar, criação de sessão com a ficha personalizada, gravação de carga/série e preservação da prescrição após nova edição foram verificados.
-- **Pendente:** conclusão na interface, gráfico com histórico real de teste, duas abas simultâneas e QA móvel. Uma confirmação nativa antiga travou a automação; foi solicitada intervenção para fechá-la. A confirmação foi substituída no código por diálogo acessível, ainda pendente de smoke completo.
+- Smoke concluído em 12/11: sessão completa de 24 séries, cancelamento e confirmação de sessão parcial, atualização entre duas abas, conflito de revisão preservando o formulário, evolução real de 40 para 45 kg (+5 kg) e saída da conta limpando os dados visíveis.
+- Layout verificado em iframe real de 320 e 390 px, sem rolagem horizontal. Botão Salvar permanece acima da navegação. Cartões não apresentam 100% para sessões parciais nem progresso legado para contas V2.
+- Importação dos registros anteriores disponível no Perfil, com confirmação acessível e revalidação da conta.
 - Testes com dados locais não substituem inventário/backup verificável e ensaio de rollback dos dados reais para o lançamento V2.
 
 ## Estado de publicação
 
-Rascunho para revisão. Não realizar merge/deploy enquanto o smoke restante, CI e gates de migração/rollback documentados não estiverem concluídos. O plano Spark foi preservado.
+Smoke local concluído e alteração preparada para revisão na branch de desenvolvimento. Lançamento V2 ainda depende de inventário/backup verificável, ensaio de migração/rollback e decisão de publicação. O plano Spark foi preservado.
 
 ## Regras de segurança (protótipo)
 
 I've set up prototype Security Rules to keep the data in Firestore safe. They are designed to be secure for private training plans and immutable session prescriptions through authenticated ownership, bounded schemas, revision checks and validation on creates and updates. However, you should review and verify them before broadly sharing your app. If you'd like, I can help you harden these rules.
+
