@@ -487,6 +487,16 @@ export function initSessionUI(getDay,{openWorkout,showWorkouts}={}){
      await createV2Workout({db,uid,session:next,runTransaction,doc,serverTimestamp});
     }finally{saving=false;render();}
     await load();
+    if(session?.id===next.id&&session.status==='active'){
+     const title=$('trainingTitle');
+     title.setAttribute('tabindex','-1');
+     title.focus({preventScroll:true});
+     window.scrollTo({top:0,left:0,behavior:'instant'});
+     // Run after layout so scroll anchoring cannot retain the old start button position.
+     requestAnimationFrame(()=>{
+      if(session?.id===next.id&&window.nexorActiveDay?.()===next.day)window.scrollTo({top:0,left:0,behavior:'instant'});
+     });
+    }
    }else throw Error('Início V1 desativado; faça login e conecte-se para iniciar V2');
   }catch(e){console.error('Nexor start:',e);$('sessionMessage').textContent='Falha ao iniciar sessão V2: '+(e?.code||e?.message||'erro desconhecido')+'. Consulte o console (F12) para detalhes.';alert('Não foi possível iniciar o treino V2. Veja o diagnóstico abaixo do botão.');}
  };
