@@ -1,0 +1,21 @@
+[
+  "tests/coaching-firestore.test.mjs",
+  "tests/training-plans-firestore.test.mjs",
+  "tests/dynamic-workout-immutable-revisions.test.mjs",
+  "tests/dynamic-workout-child-exercises.test.mjs",
+  "tests/dynamic-workout-plan-authorization.test.mjs",
+  "tests/dynamic-workout-publication-firestore.test.mjs",
+  "tests/dynamic-workout-plans-firestore.test.mjs",
+  "tests/dynamic-workout-transactions-firestore.test.mjs",
+  "tests/dynamic-workout-rules-gate.test.mjs",
+  "tests/firestore-rules.test.mjs",
+  "tests/offline-sync-firestore.test.mjs",
+  "tests/session-exercise-rules-v2.test.mjs",
+  "tests/session-v2-atomic-firestore.test.mjs",
+  "tests/session-v2-update-firestore.test.mjs",
+  "tests/offline-v2-integration-firestore.test.mjs",
+  "tests/session-v2-guard-firestore.test.mjs",
+  "tests/session-v2-migration-firestore.test.mjs",
+  "tests/session-v2-finish-firestore.test.mjs",
+  "tests/session-v2-summary-rules.test.mjs"
+]

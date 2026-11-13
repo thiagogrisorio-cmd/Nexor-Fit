@@ -1,4 +1,9 @@
+import {showExerciseGuide} from './exercise-guides.js';
+import {activeWorkoutDay} from './workout-card-state.js';
 import {encodeSessionForFirestore,decodeSessionFromFirestore} from './firestore-session-codec.js';
+import {exerciseIdentity} from './training-prescription.js';
+import {confirmAction} from './confirm-action.js';
+import {watchExerciseRevisions} from './session-exercise-live.js';
 import {loadWorkoutForUI} from './session-ui-loader.js';
 import {listPendingV2Edits,queueV2SetEdit} from './offline-v2-queue.js';
 import {canUseV2WorkoutPilot} from './workout-v2-rollout-policy.js';
@@ -10,10 +15,11 @@ import {startSession,markSet,finishSession,sessionProgress,remainingRest} from '
 import {auth} from './auth.js';
 import {cacheOnlineWorkout,readOfflineWorkout,changeOfflineWorkout,pendingOfflineOperations} from './offline-controller.js';
 import {onAuthStateChanged} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
-import {getFirestore,doc,getDoc,getDocs,collection,query,orderBy,limit,onSnapshot,runTransaction,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import {getFirestore,doc,getDoc,getDocs,collection,query,where,orderBy,limit,getCountFromServer,onSnapshot,runTransaction,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const db=getFirestore();
 let loadGeneration=0;
 let stopControlListener=null, stopSessionListener=null;
+let stopExerciseListeners=null;
 let observedSessionId='';
 let v2Notice='';
 let v2ReadOnly=false;
@@ -26,13 +32,16 @@ const previousWeights=new Map();
 const weightFeedback=new Map();
 async function loadPreviousWeights(account,day,currentSessionId){
  if(!navigator.onLine||!account)return;
- const rows=await getDocs(collection(db,'users',account,'sessions'));
+ const rows=await getDocs(query(collection(db,'users',account,'sessions'),orderBy('startedAt','desc'),limit(50)));
  if(uid!==account||auth.currentUser?.uid!==account)return;
  const previous=rows.docs.filter(row=>row.id!==currentSessionId&&row.data().schemaVersion===2&&row.data().status==='completed'&&row.data().day===day).sort((a,b)=>String(b.data().endedAt||'').localeCompare(String(a.data().endedAt||'')))[0];
  const snapshots=previous?await Promise.all(Array.from({length:12},(_,i)=>getDoc(doc(db,'users',account,'sessions',previous.id,'exercises',String(i))))):[];
  if(uid!==account||auth.currentUser?.uid!==account||session?.id!==currentSessionId)return;
  previousWeights.clear();
  snapshots.forEach((snap,i)=>{
+  const previousPrescription=previous.data().prescription||window.nexorDefaultWorkoutDays?.[day]?.[2];
+  const currentPrescription=session.prescription||window.nexorDefaultWorkoutDays?.[day]?.[2];
+  if(!previousPrescription?.[i]||!currentPrescription?.[i]||exerciseIdentity(previousPrescription[i])!==exerciseIdentity(currentPrescription[i]))return;
   if(!snap.exists()||snap.data().index!==i||snap.data().sessionId!==previous.id)return;
   snap.data().sets?.forEach((set,j)=>{if(set.done&&typeof set.weightKg==='number')previousWeights.set(weightKey(currentSessionId,i,j),set.weightKg);});
  });
@@ -78,6 +87,7 @@ async function refreshV2PendingCount(){
   if(uid!==account||auth.currentUser?.uid!==account)return;
   v2PendingCount=edits.length;
   render();
+  if(edits.length===0&&navigator.onLine&&v2ReadOnly&&session?.status==='active')await load();
  }catch(error){console.warn('Nexor V2 pending status:',error);}
 }
 const v2PilotRequested=()=>true; // V2-only write boundary; legacy sessions remain readable.
@@ -117,12 +127,14 @@ function stopLiveListeners(){
  v2LoadToken++;
  if(stopControlListener){stopControlListener();stopControlListener=null;}
  if(stopSessionListener){stopSessionListener();stopSessionListener=null;}
+ stopExerciseListeners?.();stopExerciseListeners=null;
  observedSessionId='';
 }
 function watchSession(accountUid,id){
  if(observedSessionId===id)return;
  v2LoadToken++;
  if(stopSessionListener){stopSessionListener();stopSessionListener=null;}
+ stopExerciseListeners?.();stopExerciseListeners=null;
  observedSessionId=id;
  if(!id){
   if(!saving)pendingOfflineOperations(accountUid).then(pending=>{
@@ -132,6 +144,9 @@ function watchSession(accountUid,id){
   }).catch(console.warn);
   return;
  }
+ stopExerciseListeners=watchExerciseRevisions({db,uid:accountUid,sessionId:id,doc,onSnapshot,onChange:()=>{
+  if(uid===accountUid&&auth.currentUser?.uid===accountUid&&observedSessionId===id&&!saving&&navigator.onLine)load();
+ },onError:error=>console.warn('Nexor exercise sync:',error)});
  stopSessionListener=onSnapshot(doc(db,'users',accountUid,'sessions',id),snapshot=>{
   if(uid!==accountUid||auth.currentUser?.uid!==accountUid||saving||snapshot.metadata.hasPendingWrites)return;
   pendingOfflineOperations(accountUid).then(pending=>{
@@ -210,7 +225,8 @@ function watchControl(accountUid){
 const key='nexor_fit_active_session_v1',historyKey='nexor_fit_sessions_v1';
 const $=id=>document.getElementById(id);
 let session=null, saving=false, ready=false, uid=null, completedSessions=[];
-let renderedSetKey='',renderedHistoryKey='';
+let renderedSetKey='',renderedHistoryKey='',dashboardKey='';
+let completedSessionCount=null;
 let offlineSaving=false;
 const activeCacheKey=account=>'nexor_fit_offline_active_'+account;
 const notifyQueue=()=>window.dispatchEvent(new Event('nexor-offline-queue-changed'));
@@ -320,6 +336,9 @@ async function load(){
     loadedSession=result.status==='ready'?result.session:null;
    }
    const rows=await getDocs(query(collection(db,'users',uid,'sessions'),orderBy('startedAt','desc'),limit(50)));
+   const total=await getCountFromServer(query(collection(db,'users',uid,'sessions'),where('status','==','completed'))).catch(()=>null);
+   if(generation!==loadGeneration||accountUid!==uid)return;
+   completedSessionCount=total?total.data().count:null;
    loadedHistory=rows.docs.filter(row=>row.data().schemaVersion!==2).map(row=>decodeSessionFromFirestore(row.data())).filter(item=>item.status==='completed');
    {
     // V2 history remains visible without the pilot flag; this is read-only.
@@ -362,7 +381,7 @@ async function load(){
  render();
 }
 function workoutExerciseLabel(day,index){
- const raw=window.nexorWorkoutDays?.[day]?.[2]?.[index];
+ const raw=(session?.prescription||window.nexorDefaultWorkoutDays?.[day]?.[2]||window.nexorWorkoutDays?.[day]?.[2])?.[index];
  if(typeof raw!=='string')return 'Exercício '+(index+1);
  const [group,name,reps]=raw.split('|');
  return {group,name,reps};
@@ -377,15 +396,25 @@ function exerciseRestSeconds(sets,restSeconds,now=Date.now()){
 }
 function render(){
  const panel=$('sessionPanel');if(!panel)return;
+ const overview={history:completedSessions.map(({id,day,endedAt})=>({id,day,endedAt})),completedCount:completedSessionCount,active:session?.status==='active'?{day:session.day,completedExercises:session.sets.filter(sets=>sets.every(set=>set.done)&&exerciseRestSeconds(sets,session.restSeconds)===0).length,totalExercises:session.sets.length}:null};
+ const overviewKey=JSON.stringify(overview);if(overviewKey!==dashboardKey){dashboardKey=overviewKey;window.nexorSessionData=overview;window.dispatchEvent(new Event('nexor-sessions-changed'));}
  const history=$('sessionHistory');
- const historyKeyView=JSON.stringify(completedSessions.map(item=>[item.id,item.status,item.endedAt,item.completedSets]));
- if(history && renderedHistoryKey!==historyKeyView){renderedHistoryKey=historyKeyView;history.innerHTML=completedSessions.slice(0,20).map(item=>'<div class="log"><b>Treino '+String.fromCharCode(65+item.day)+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+' · '+(Number.isInteger(item.completedSets)?item.completedSets:(item.schemaVersion===2?'—':sessionProgress(item).done))+' séries</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';}
+ const displayHistory=[...completedSessions,...(window.nexorCoachState?.history||[]).map(s=>({...s,name:s.prescription.name,completedSets:s.sets.reduce((n,r)=>n+r.items.filter(x=>x.done).length,0),durationSeconds:Math.max(0,Math.floor((Date.parse(s.endedAt)-Date.parse(s.startedAt))/1000))}))].sort((a,b)=>String(b.endedAt).localeCompare(String(a.endedAt)));
+ const escapedHistory=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const historyKeyView=JSON.stringify(displayHistory.map(item=>[item.id,item.status,item.endedAt,item.completedSets]));
+ if(history && renderedHistoryKey!==historyKeyView){renderedHistoryKey=historyKeyView;history.innerHTML=displayHistory.slice(0,20).map(item=>'<div class="log"><b>'+escapedHistory(item.name||('Treino '+String.fromCharCode(65+item.day)))+'</b> · '+new Date(item.endedAt).toLocaleString('pt-BR')+' · '+fmt(item.durationSeconds||0)+(Number.isInteger(item.completedSets)?' · '+item.completedSets+' séries':item.schemaVersion===2?'':' · '+sessionProgress(item).done+' séries')+'</div>').join('')||'<small>Nenhuma sessão cronometrada concluída.</small>';}
  const current=session?.status==='active'&&session.day===window.nexorActiveDay?.();
  panel.classList.toggle('hidden',!current);
  $('sessionStartPanel').classList.toggle('hidden',!!current);
  if(session?.status==='active'&&!current)$('sessionMessage').textContent='Há um treino em andamento. Abra o Treino '+String.fromCharCode(65+session.day)+' para continuar.';
  else $('sessionMessage').textContent=v2Notice+(v2PendingCount?' '+v2PendingCount+' alteração(ões) V2 aguardando sincronização.':'');
- $('sessionStartPanel').querySelector('button').disabled=!ready||saving||v2ReadOnly||session?.status==='active';
+ if(window.nexorCoach&&session?.status!=='active')$('sessionMessage').textContent='Para iniciar um novo treino, use sua ficha personalizada na aba Treinos.';
+ if(window.nexorCoachState?.activeId&&!current)$('sessionMessage').textContent='Há um treino da sua ficha personalizada em andamento. Use a aba Em andamento para retomar.';
+ const resumeButton=$('resumeActiveSession');
+ resumeButton.hidden=!(session?.status==='active'&&!current);
+ resumeButton.disabled=saving||offlineSaving;
+ if(!resumeButton.hidden)resumeButton.textContent='Retomar Treino '+String.fromCharCode(65+session.day);
+ $('startSession').disabled=!!window.nexorCoach||!!window.nexorCoachState?.activeId||!ready||saving||v2ReadOnly||session?.status==='active'||window.nexorTrainingPlansReady!==true;
  if(!current)return;
  const p=sessionProgress(session), elapsed=Math.max(0,Math.floor((Date.now()-Date.parse(session.startedAt))/1000));
  $('sessionElapsed').textContent=fmt(elapsed);$('sessionSets').textContent=p.done+' de '+p.total+' séries ('+p.percent+'%)';
@@ -395,7 +424,7 @@ function render(){
  $('progressPct').textContent=percent+'%';$('progressBar').style.width=percent+'%';
  $('progressCount').textContent=completeExercises+' de '+session.sets.length+' exercícios concluídos';
  // Rest belongs to the exercise whose set was marked done, not to the whole workout.
- $('sessionRest').textContent='O descanso de cada exercício aparece no próprio cartão.';
+ $('sessionRest').textContent=session.restSeconds===0?'Contador de descanso desativado. Controle seu intervalo por conta própria.':'O descanso começa ao marcar cada série como feita.';
  const legacyBlocked=!v2ReadOnly&&v2PilotRequested();
  const pilotEdit=v2ReadOnly&&v2PendingCount===0&&v2PilotEnabledOffline()&&!!uid&&(navigator.onLine||session.sets.some((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))));
  const offlineBaselineIndexes=v2ReadOnly&&uid?session.sets.map((_,i)=>v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i))):[];
@@ -410,39 +439,68 @@ function render(){
    const subtitle=typeof details==='string'?'':details.group+' · '+sets.length+' séries · '+details.reps+' repetições';
    const demoUrl='https://www.youtube.com/results?search_query='+encodeURIComponent(title+' execução correta musculação');
    const safe=text=>String(text).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[char]));
-   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+(j+1)+' · '+(set.done?'Feito ✓':'Marcar feito')+'</button><label class="set-weight">Carga série '+(j+1)+' (kg)<span class="weight-controls"><button type="button" data-weight-minus="'+i+'-'+j+'" aria-label="Diminuir carga">−</button><input type="number" min="0" max="2000" step="0.5" inputmode="decimal" data-set-weight="'+i+'-'+j+'" value="'+safe(weightDrafts.get(weightKey(session.id,i,j))??set.weightKg??'')+'" placeholder="Opcional"><button type="button" data-weight-plus="'+i+'-'+j+'" aria-label="Aumentar carga">+</button></span><small>Última vez: '+(previousWeights.has(weightKey(session.id,i,j))?safe(previousWeights.get(weightKey(session.id,i,j)))+' kg':'sem registro')+'</small>'+(weightFeedback.get(weightKey(session.id,i,j))?'<small class="weight-feedback">Parabéns, sua carga aumentou</small>':'')+'</label>').join('')+'</div><div class="session-exercise-tools"><a class="btn outline small" target="_blank" rel="noopener noreferrer" href="'+demoUrl+'">▶ Demonstração</a></div><p class="exercise-rest" data-rest-exercise="'+i+'" role="timer" aria-label="Descanso do exercício" hidden></p></article>';
+   return '<article class="session-exercise '+(complete?'is-complete':'')+'"><div class="row"><div><small class="tag">'+(complete?'CONCLUÍDO':'EXERCÍCIO '+(i+1))+'</small><h3>'+safe(title)+'</h3><small>'+safe(subtitle)+'</small></div><strong class="percent">'+sets.filter(set=>set.done).length+'/'+sets.length+'</strong></div><div class="session-exercise-tools"><button type="button" class="btn outline small" data-how-exercise="'+i+'">Como fazer</button><a class="btn outline small" target="_blank" rel="noopener noreferrer" href="'+demoUrl+'">▶ Demonstração</a></div><div class="session-exercise-sets">'+sets.map((set,j)=>'<section class="session-set"><label class="set-weight">Carga - série '+String(j+1).padStart(2,'0')+' (Kg)<span class="weight-controls"><button type="button" data-weight-minus="'+i+'-'+j+'" aria-label="Diminuir carga">−</button><input aria-label="Carga em kg" type="number" min="0" max="2000" step="0.5" inputmode="decimal" data-set-weight="'+i+'-'+j+'" value="'+safe(weightDrafts.get(weightKey(session.id,i,j))??set.weightKg??'')+'" placeholder="Opcional"><button type="button" data-weight-plus="'+i+'-'+j+'" aria-label="Aumentar carga">+</button></span><small>Última vez: '+(previousWeights.has(weightKey(session.id,i,j))?safe(previousWeights.get(weightKey(session.id,i,j)))+' kg':'sem registro')+'</small>'+(weightFeedback.get(weightKey(session.id,i,j))?'<small class="weight-feedback">Parabéns, sua carga aumentou</small>':'')+'</label><button type="button" class="btn small '+(set.done?'':'outline')+'" data-set="'+i+'-'+j+'" '+(saving||offlineSaving||((v2ReadOnly&&(!pilotEdit||(!navigator.onLine&&!v2ExerciseBaselines.has(v2BaselineKey(uid,session.id,i)))))||legacyBlocked)?'disabled':'')+' aria-pressed="'+set.done+'">Série '+String(j+1).padStart(2,'0')+' - '+(set.done?'Feito ✓':'Marcar como feito')+'</button><p class="set-rest exercise-rest" data-rest-set="'+i+'-'+j+'" role="timer" aria-label="Descanso da série '+String(j+1).padStart(2,'0')+'" hidden></p></section>').join('')+'</div></article>';
   };
   const pending=exercises.filter(row=>!row.complete),done=exercises.filter(row=>row.complete);
   $('sessionSetList').innerHTML='<h3>Exercícios em andamento ('+pending.length+')</h3>'+pending.map(buildExercise).join('')+(done.length?'<h3 class="section">Exercícios concluídos ('+done.length+')</h3>'+done.map(buildExercise).join(''):'');
  }
  // Update only countdown text every second; never recreate buttons while the user interacts.
- $('sessionSetList').querySelectorAll('[data-rest-exercise]').forEach(target=>{
-  const index=Number(target.dataset.restExercise);
-  const sets=session.sets[index];
-  const seconds=sets?exerciseRestSeconds(sets,session.restSeconds):0;
+ $('sessionSetList').querySelectorAll('[data-rest-set]').forEach(target=>{
+  const [exerciseIndex,setIndex]=target.dataset.restSet.split('-').map(Number);
+  const set=session.sets[exerciseIndex]?.[setIndex];
+  const seconds=set?exerciseRestSeconds([set],session.restSeconds):0;
   target.hidden=seconds===0;
-  target.textContent=seconds?'Descanso deste exercício: '+restfmt(seconds):'';
+  target.textContent=seconds?'Descanso da série '+String(setIndex+1).padStart(2,'0')+': '+restfmt(seconds):'';
  });
  $('finishSession').disabled=saving||offlineSaving||(v2ReadOnly&&!(v2PilotEnabled()&&!!uid&&navigator.onLine&&v2PendingCount===0))||legacyBlocked;
 }
-export function initSessionUI(getDay){
+export function initSessionUI(getDay,{openWorkout,showWorkouts}={}){
+ async function resume(){
+  const account=auth.currentUser?.uid;
+  if(!ready)await load();
+  if(account!==auth.currentUser?.uid)return;
+  const day=activeWorkoutDay(session);
+  if(day!==null)openWorkout?.(day);
+  else if(ready)showWorkouts?.();
+ }
+ $('resumeActiveSession').onclick=resume;
  window.nexorActiveDay=getDay;
+ $('noRestTimer').onchange=()=>{
+  $('restTimeFields').disabled=$('noRestTimer').checked;
+ };
+ $('restMinutes').onchange=()=>{
+  const atLimit=Number($('restMinutes').value)===10;
+  if(atLimit)$('restSeconds').value='0';
+  $('restSeconds').disabled=atLimit;
+ };
  $('startSession').onclick=async()=>{
-  if(!ready||saving||v2ReadOnly)return;
+  if(!ready||saving||v2ReadOnly||window.nexorTrainingPlansReady!==true)return;
   if(session?.status==='active'){alert('Conclua seu treino em andamento antes de iniciar outro.');return;}
   const minutes=Number($('restMinutes').value);
-  if(!Number.isFinite(minutes)||minutes<0||minutes>10){alert('Escolha entre 0 e 10 minutos.');return;}
+  const seconds=Number($('restSeconds').value),restSeconds=$('noRestTimer').checked?0:minutes*60+seconds;
+  if(!Number.isInteger(minutes)||!Number.isInteger(seconds)||minutes<0||seconds<0||seconds>59||restSeconds>600){alert('Escolha um descanso de até 10 minutos.');return;}
   try{
-   const next=startSession({day:getDay(),restSeconds:Math.round(minutes*60)});
+   const next=startSession({day:getDay(),restSeconds});
    const pilotRequested=v2PilotRequested();
    const pilot=v2PilotEnabled();
    if(pilotRequested&&!pilot){alert('Piloto V2 indisponível sem conexão ou autenticação válida. Nenhuma sessão V1 será criada.');return;}
    if(pilot&&uid&&auth.currentUser?.uid===uid){
     saving=true;render();
     try{
+     next.prescription=structuredClone(window.nexorWorkoutDays[next.day][2]);
      await createV2Workout({db,uid,session:next,runTransaction,doc,serverTimestamp});
     }finally{saving=false;render();}
     await load();
+    if(session?.id===next.id&&session.status==='active'){
+     const title=$('trainingTitle');
+     title.setAttribute('tabindex','-1');
+     title.focus({preventScroll:true});
+     window.scrollTo({top:0,left:0,behavior:'instant'});
+     // Run after layout so scroll anchoring cannot retain the old start button position.
+     requestAnimationFrame(()=>{
+      if(session?.id===next.id&&window.nexorActiveDay?.()===next.day)window.scrollTo({top:0,left:0,behavior:'instant'});
+     });
+    }
    }else throw Error('Início V1 desativado; faça login e conecte-se para iniciar V2');
   }catch(e){console.error('Nexor start:',e);$('sessionMessage').textContent='Falha ao iniciar sessão V2: '+(e?.code||e?.message||'erro desconhecido')+'. Consulte o console (F12) para detalhes.';alert('Não foi possível iniciar o treino V2. Veja o diagnóstico abaixo do botão.');}
  };
@@ -452,6 +510,8 @@ export function initSessionUI(getDay){
   weightDrafts.set(weightKey(session.id,i,j),input.value);
  });
  $('sessionSetList').onclick=async event=>{
+  const how=event.target.closest('[data-how-exercise]');
+  if(how&&session){showExerciseGuide(workoutExerciseLabel(session.day,Number(how.dataset.howExercise)).name||'Exercício personalizado');return;}
   const minus=event.target.closest('[data-weight-minus]');
   const plus=event.target.closest('[data-weight-plus]');
   if(minus||plus){adjustWeightDraft(minus||plus,plus?0.5:-0.5);return;}
@@ -462,7 +522,10 @@ export function initSessionUI(getDay){
   try{if(await offlineEdit('mark-set',i,j,!session.sets[i][j].done))return;await save(session,stored=>markSet(stored,i,j,!stored.sets[i][j].done));}catch(e){alert('Não foi possível salvar a série.');}
  };
  $('finishSession').onclick=async()=>{
-  if(!session||saving||offlineSaving||!confirm('Concluir treino e salvar o tempo e as séries realizadas?'))return;
+  if(!session||saving||offlineSaving)return;
+  const confirmationContext={uid,id:session.id};
+  if(!await confirmAction('Concluir treino e salvar o tempo e as séries realizadas?',{confirmLabel:'Concluir treino'}))return;
+  if(uid!==confirmationContext.uid||auth.currentUser?.uid!==confirmationContext.uid||session?.id!==confirmationContext.id)return;
   if(!v2ReadOnly&&v2PilotRequested()){alert('Treino V1 preservado para leitura. Migração para V2 necessária antes de concluir.');return;}
   if(v2ReadOnly){
    if(!v2PilotEnabled()||!uid||auth.currentUser?.uid!==uid||!navigator.onLine)return;
@@ -480,11 +543,13 @@ export function initSessionUI(getDay){
   try{if(await offlineEdit('finish'))return;await save(session,stored=>finishSession(stored));}catch(e){alert('Não foi possível concluir o treino.');}
  };
  window.addEventListener('nexor-v2-queue-changed',refreshV2PendingCount);
+ window.addEventListener('nexor-plans-changed',render);
+ window.addEventListener('nexor-coach-changed',render);
  window.addEventListener('online',refreshV2PendingCount);
  onAuthStateChanged(auth,()=>{
   const accountUid=auth.currentUser?.uid||null;
   uid=accountUid;
-  v2PendingCount=0;
+  v2PendingCount=0;completedSessionCount=null;
   v2ExerciseBaselines.clear();
   previousWeights.clear();weightFeedback.clear();weightDrafts.clear();
   refreshV2PendingCount();
@@ -498,5 +563,5 @@ export function initSessionUI(getDay){
   if(document.visibilityState==='visible' && !saving)load();
  });
  setInterval(render,1000);
- return {render,load};
+ return {render,load,resume};
 }
