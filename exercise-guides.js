@@ -1,3 +1,4 @@
+import {EXPANSION} from './catalog-expansion.js';
 // Short original instructions for the fixed Nexor-Fit catalogue.
 // General technique references: https://www.acefitness.org/resources/everyone/exercise-library/
 // and https://www.nasm.org/workout-exercise-guidance
@@ -115,6 +116,7 @@ for(const [name,execution] of [
  ['Tríceps francês na polia','De costas para a torre, segure uma ponta da corda em cada mão atrás da cabeça. Com os braços elevados e o tronco estável, estenda os cotovelos para levar as mãos para cima. Flexione os cotovelos lentamente para retornar, sem mover os braços inteiros.'],
  ['Tríceps francês com halter','Segure um halter com as duas mãos acima da cabeça. Mantendo os braços elevados, flexione os cotovelos para descer o halter atrás da cabeça. Estenda os cotovelos com controle para retornar, sem arquear a lombar.']
 ])executionOverrides.set(normalize(name),execution);
+for(const e of EXPANSION){add([e.name],e.muscles,e.execution,e.tip);equip([e.name],e.equipment.length?e.name:'Espaço livre no solo',e.accessories,'Confira o espaço, os ajustes e uma amplitude confortável antes de começar.',e.kind);}
 export function exerciseGuide(name){const key=normalize(name),guide=guides.get(key);return guide?{...guide,...equipmentDetails.get(key),execution:executionOverrides.get(key)??guide.execution}:null;}
 
 export function showExerciseGuide(name){

@@ -1,5 +1,6 @@
+import {EXPANSION} from './catalog-expansion.js';
 /** Curated, versioned catalogue. Replacements require the same movement pattern. */
-export const EQUIPMENT={dumbbells:'Halteres',bench:'Banco regulável',barbell:'Barra e anilhas',rack:'Rack com travas',cable:'Polias e puxadores',chest:'Chest press',fly:'Peck deck',row:'Remada articulada',lat:'Puxada alta',shoulder:'Desenvolvimento máquina',legpress:'Leg press',hack:'Hack squat',smith:'Smith',curl:'Flexora',scott:'Scott máquina',band:'Elástico de resistência',pullup:'Barra fixa'};
+export const EQUIPMENT={dumbbells:'Halteres',bench:'Banco regulável',barbell:'Barra e anilhas',rack:'Rack com travas',cable:'Polias e puxadores',chest:'Chest press',fly:'Peck deck',row:'Remada articulada',lat:'Puxada alta',shoulder:'Desenvolvimento máquina',legpress:'Leg press',hack:'Hack squat',smith:'Smith',curl:'Flexora',scott:'Scott máquina',band:'Elástico de resistência',pullup:'Barra fixa',abdominal:'Máquina abdominal',extension:'Cadeira extensora',hip:'Abdutora/adutora',hipthrust:'Máquina de elevação pélvica',calf:'Panturrilha sentada',shoulderraise:'Elevação lateral máquina'};
 const entries=[];
 const add=(pattern,group,level,equipment,names)=>names.forEach(name=>entries.push({id:'ex-'+String(entries.length+1).padStart(3,'0'),name,pattern,group,level,equipment}));
 add('push-horizontal','Peito',0,['chest'],['Supino máquina chest press','Supino inclinado na máquina']);
@@ -48,7 +49,9 @@ add('calves','Panturrilhas',0,[],['Elevação de panturrilhas em pé']);
 add('scapular','Costas',0,[],['Elevação de braços em W no solo']);
 add('pull-horizontal','Costas',0,['band'],['Remada com elástico']);
 add('pull-vertical','Costas',2,['pullup'],['Barra fixa']);
+for(const e of EXPANSION)entries.push({id:'ex-'+String(entries.length+1).padStart(3,'0'),...e});
 export const EXERCISES=Object.freeze(entries.map(x=>Object.freeze({...x,equipment:Object.freeze(x.equipment)})));
 export const exerciseById=id=>EXERCISES.find(e=>e.id===id);
 export const eligible=(e,p)=>e.level<=['basic','intermediate','advanced'].indexOf(p.level)&&e.equipment.every(item=>p.equipment.includes(item));
-export function compatibleExercises(id,profile,excluded=[]){const source=exerciseById(id);if(!source)return[];return EXERCISES.filter(e=>e.id!==id&&e.pattern===source.pattern&&eligible(e,profile)&&!excluded.includes(e.id));}
+export function coreFunction(e){if(e.pattern!=='core')return '';if(/Pallof/i.test(e.name))return 'anti-rotação';if(/lateral/i.test(e.name))return 'estabilidade lateral';if(/Dead bug|Bird dog|calcanhar|prancha/i.test(e.name))return 'estabilização';if(/bicicleta/i.test(e.name))return 'rotação';return 'flexão';}
+export function compatibleExercises(id,profile,excluded=[]){const source=exerciseById(id);if(!source)return[];return EXERCISES.filter(e=>e.id!==id&&e.pattern===source.pattern&&coreFunction(e)===coreFunction(source)&&eligible(e,profile)&&!excluded.includes(e.id));}

@@ -3,11 +3,14 @@ import {normalizeEnvironment,equipmentForDay,dayEnvironment} from './cardio-mode
 import {EXERCISES,EQUIPMENT,exerciseById,eligible,compatibleExercises} from './coaching-catalog.js';
 export const LEVELS={basic:'Básico',intermediate:'Intermediário',advanced:'Avançado'};
 export const GOALS={muscle:'Ganho de massa',weight:'Apoio à perda de peso',endurance:'Resistência muscular',strength:'Força',fitness:'Condicionamento geral'};
-export const FOCUSES={balanced:'Corpo todo',legs:'Pernas',glutes:'Glúteos',chest:'Peito',back:'Costas',shoulders:'Ombros',arms:'Braços'};
+export const FOCUSES={balanced:'Equilíbrio entre grupos',legs:'Pernas',glutes:'Glúteos',chest:'Peito',back:'Costas',shoulders:'Ombros',arms:'Braços'};
 export function validateProfile(p){
  p=normalizeEnvironment(p);
  if(!p||!LEVELS[p.level]||!GOALS[p.goal]||!FOCUSES[p.focus]||p.adult!==true||!Number.isInteger(p.days)||p.days<2||p.days>6||![20,30,45,60,75].includes(p.minutes)||!Array.isArray(p.equipment)||p.equipment.length>Object.keys(EQUIPMENT).length||new Set(p.equipment).size!==p.equipment.length||p.equipment.some(e=>!EQUIPMENT[e]))throw Error('Revise o perfil: nível, objetivo, dias, tempo e equipamentos disponíveis.');
- return {level:p.level,goal:p.goal,focus:p.focus,adult:true,days:p.days,minutes:p.minutes,equipment:[...p.equipment].sort(),...(p.environment?{environment:p.environment,gymDays:p.gymDays,cardioLevel:p.cardioLevel,cardioMinutes:p.cardioMinutes,...(p.plannerVersion===2?{plannerVersion:2}:{})}:{})};
+ if(p.gender!==undefined&&!['male','female','undisclosed'].includes(p.gender))throw Error('Revise a opção de gênero.');
+ if(p.trainingStyle!==undefined&&!['split','fullbody'].includes(p.trainingStyle))throw Error('Escolha a divisão de treino.');
+ if(p.lowerDays!==undefined&&(!Number.isInteger(p.lowerDays)||p.lowerDays<1||p.lowerDays>3))throw Error('Escolha de um a três dias de inferiores.');
+ return {...(p.gender?{gender:p.gender}:{}),...(p.trainingStyle?{trainingStyle:p.trainingStyle,...(p.trainingStyle==='split'&&p.days>4?{lowerDays:p.lowerDays??2}:{})}:{}),level:p.level,goal:p.goal,focus:p.focus,adult:true,days:p.days,minutes:p.minutes,equipment:[...p.equipment].sort(),...(p.environment?{environment:p.environment,gymDays:p.gymDays,cardioLevel:p.cardioLevel,cardioMinutes:p.cardioMinutes,...(p.plannerVersion===2?{plannerVersion:2}:{})}:{})};
 }
 export const estimateMinutes=exercises=>Math.ceil(5+exercises.reduce((s,e)=>s+e.sets*(e.reps*3+e.restSeconds)+45,0)/60);
 export function generateProgram(raw,{variation=0}={}){

@@ -4,6 +4,16 @@ import {doc,getDoc,setDoc,updateDoc,runTransaction,serverTimestamp} from 'fireba
 import {generateProgram} from '../coaching-engine.js';import {saveCoachingProgram,createCoachedSession,editCoachedSession,decodeCoachedSession} from '../coaching-repository.js';
 let env;before(async()=>{env=await initializeTestEnvironment({projectId:'demo-nexor-coaching-tests',firestore:{rules:readFileSync(new URL('../firestore.rules',import.meta.url),'utf8')}});await env.clearFirestore();});after(async()=>env?.cleanup());
 const deps={doc,runTransaction,serverTimestamp},program=generateProgram({level:'basic',goal:'muscle',focus:'balanced',days:3,minutes:30,equipment:[],adult:true});
+
+test('expanded catalogue and split preferences persist at maximum size and reject malformed updates',async()=>{
+ const uid='expanded-catalogue',db=env.authenticatedContext(uid).firestore(),ref=doc(db,'users',uid,'coaching','current');
+ const p=generateProgram({adult:true,level:'advanced',goal:'muscle',focus:'balanced',days:6,minutes:75,environment:'gym',gymDays:6,cardioLevel:'none',cardioMinutes:0,trainingStyle:'split',lowerDays:3,gender:'female'});
+ await saveCoachingProgram({db,uid,program:p,expectedRevision:0,...deps});const saved=(await getDoc(ref)).data();assert.equal(saved.profile.lowerDays,3);assert.equal(saved.profile.gender,'female');
+ const update=profile=>({profile,revision:2,updatedAt:serverTimestamp(),reviewedAt:serverTimestamp()});
+ for(const change of [{gender:'other'},{lowerDays:0},{lowerDays:4},{trainingStyle:'unknown'},{equipment:['abdominal','abdominal']}])await assertFails(updateDoc(ref,update({...p.profile,...change})));
+ const bad=structuredClone(saved.days);bad[0].name=['not a string'];await assertFails(updateDoc(ref,{days:bad,revision:2,updatedAt:serverTimestamp(),reviewedAt:serverTimestamp()}));
+ const id=await createCoachedSession({db,uid,dayIndex:0,id:'expanded-session',...deps});assert.ok(id);
+});
 test('profile and programme are owner-only, bounded, and reject stale or malformed updates',async()=>{
  const uid='coach-owner',db=env.authenticatedContext(uid).firestore(),ref=doc(db,'users',uid,'coaching','current');
  await saveCoachingProgram({db,uid,program,expectedRevision:0,...deps});await assertSucceeds(getDoc(ref));
